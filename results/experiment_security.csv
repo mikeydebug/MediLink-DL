@@ -1,0 +1,2 @@
+total_trials,tamper_rejections,rejection_rate_pct,unique_nonces,mean_enc_ms,mean_dec_ms
+100,100,100.0,100,0.0047,0.0021

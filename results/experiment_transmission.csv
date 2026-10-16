@@ -1,0 +1,5 @@
+profile,bandwidth_kbps,rtt_ms,loss_rate,prioritized_first_roi_sec,non_prioritized_first_roi_sec,prioritized_total_time_sec,non_prioritized_total_time_sec,retransmissions,effective_throughput_kbps
+Rural 2G/EDGE,48,200.0,0.02,0.592,3.592,3.916,3.916,0,20.1
+Rural 3G (Weak),128,150.0,0.05,0.372,2.097,2.294,2.294,0,34.33
+Satellite VSAT,256,500.0,0.02,1.036,5.299,5.822,5.822,0,13.52
+Lossy Wireless,64,120.0,0.1,0.384,2.887,3.1,3.1,1,25.4

@@ -1,0 +1,3 @@
+label,image_shape,total_pixels,roi_pixels,bg_pixels,roi_pixel_fraction,raw_bytes,compressed_bytes,compression_ratio,size_reduction_pct,psnr_global_db,ssim_global,psnr_roi_db,ssim_roi,psnr_bg_db,ssim_bg
+"ROI-Aware (q_roi=90, q_bg=25)",512x512,262144,3409,258735,0.013004302978515625,262144,9842,26.64,96.25,32.51,0.8049,38.08,0.9293,32.47,0.8035
+Uniform Baseline (q=32),512x512,262144,3409,258735,0.013004302978515625,262144,9622,27.24,96.33,33.04,0.8133,34.58,0.844,33.02,0.8131
