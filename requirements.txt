@@ -1,0 +1,19 @@
+# MediLink-DL Dependency Specification
+# Tested on Python 3.11 (macOS arm64 / Apple Silicon)
+
+# Core scientific and image processing
+numpy>=1.24.0,<2.0.0
+Pillow>=10.0.0
+opencv-python>=4.8.0
+matplotlib>=3.7.0
+scikit-image>=0.21.0
+
+# Cryptography and security
+cryptography>=41.0.0
+
+# Deep learning and saliency visualization (CPU / Apple Silicon MPS compatible)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Automated testing
+pytest>=7.4.0
