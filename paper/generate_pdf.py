@@ -319,7 +319,7 @@ def build_pdf(output_path: Path):
     
     story.append(Paragraph("<b>4.3 Authenticated Encryption & Prioritized Transport</b>", h2_style))
     story.append(Paragraph(
-        "Payloads are encrypted via AES-256-GCM using fresh 96-bit CSPRNG nonces and 128-bit Poly1305/GHASH authentication tags (28-byte overhead). "
+        "Payloads are encrypted via AES-256-GCM using fresh 96-bit CSPRNG nonces and 128-bit GHASH authentication tags (28-byte overhead, NIST SP 800-38D). "
         "Encrypted streams are framed into 1024-byte chunks with SHA-256 checksums and scheduled via min-heap priority: "
         "Priority(Header)=30 &gt; Priority(ROI)=20 &gt; Priority(Background)=5. ARQ handles packet loss recovery.",
         body_style

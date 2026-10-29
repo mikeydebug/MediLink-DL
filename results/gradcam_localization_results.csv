@@ -1,0 +1,5 @@
+Regime,Loss_Mode,Lambda_Loc,Beta_Dice,Val_Accuracy,ROI_Dice,ROI_IoU,Pointing_Game_Acc,Energy_in_ROI,Final_Train_Loss,Val_Loss,Runtime_Sec
+A: Classification-Only,cls_only,0.0,0.0,0.5,0.2895,0.1719,0.5,0.1102,0.486,0.6791,1.425
+B: Combined Loc Loss,combined,1.0,0.5,0.7,0.0,0.0,0.0,0.0,2.094,1.3386,1.836
+C: Alignment-Only,align_only,1.0,0.0,0.8,0.0,0.0,0.0,0.0,1.569,1.0622,1.785
+D: Dice-Only,dice_only,1.0,0.0,0.5,0.6969,0.5552,1.0,0.8239,0.9503,0.758,1.803

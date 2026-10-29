@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from typing import Optional
+from PIL import Image
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")  # Headless backend for robust server/headless CLI execution
@@ -42,11 +43,22 @@ from src.security import (
     generate_secure_key,
     encrypt_payload,
     decrypt_payload,
-    demonstrate_tamper_detection
+    demonstrate_tamper_detection,
+    get_aead_cipher
 )
 from src.transmission import (
     simulate_transmission
 )
+import torch
+from src.roi_localization import (
+    build_demonstration_cxr_model,
+    generate_roi_mask_from_heatmap,
+    create_cam_overlay
+)
+from src.localization_loss import DifferentiableGradCAM
+from src.train_localization import run_localization_experiments
+from src.benchmark_crypto import run_crypto_benchmarks
+from src.optimization import run_cross_layer_optimization
 
 
 def generate_comparison_plot(
@@ -126,7 +138,10 @@ def run_demonstration(
     image_path: Optional[str] = None,
     output_dir: str = "results",
     q_roi: int = 90,
-    q_bg: int = 25
+    q_bg: int = 25,
+    roi_method: str = "synthetic",
+    crypto_algorithm: str = "AES-256-GCM",
+    gradcam_threshold: float = 0.45
 ) -> int:
     """Execute the end-to-end research prototype pipeline."""
     results_dir = Path(output_dir)
@@ -134,24 +149,57 @@ def run_demonstration(
     
     print("=" * 78)
     print(" MediLink-DL: Telemedicine Research Prototype Demonstration")
+    print(f" Configuration: ROI-Source={roi_method.upper()} | Cipher={crypto_algorithm} | q_roi={q_roi}, q_bg={q_bg}")
     print("=" * 78)
     
-    # Step 1: Image Acquisition
+    # Step 1: Image Acquisition & ROI Generation
     if image_path and Path(image_path).exists():
         print(f"\n[1/7] Loading user-supplied image: {image_path}")
         image = load_grayscale_image(image_path, target_size=(512, 512))
         h, w = image.shape
-        # Default rectangular ROI covering central lower lung field
-        mask = create_rectangular_roi_mask((h, w), (h // 2, w // 4, int(h * 0.8), int(w * 0.75)))
+        synthetic_mask = create_rectangular_roi_mask((h, w), (h // 2, w // 4, int(h * 0.8), int(w * 0.75)))
         print(f"      Image loaded successfully: {h}x{w} (8-bit grayscale).")
-        print("      Created default rectangular ROI mask for evaluation.")
     else:
         print("\n[1/7] Generating synthetic chest X-ray phantom (reproducible test input)...")
-        image, mask, meta = generate_synthetic_cxr_phantom(
+        image, synthetic_mask, meta = generate_synthetic_cxr_phantom(
             width=512, height=512, seed=42, add_lesion=True
         )
         print("      [NOTE] Generated synthetic phantom with simulated focal lesion.")
         print(f"      [NOTE] Disclaimer stamped on image: '{meta['disclaimer']}'")
+
+    # Determine ROI Mask: Synthetic Ground Truth vs Deep Learning Grad-CAM
+    if roi_method == "gradcam":
+        print("      [DL-INFERENCE] Running Deep Learning model inference and Grad-CAM saliency localization...")
+        model, target_layer, meta = build_demonstration_cxr_model()
+        weights_path = results_dir / "best_localization_model.pt"
+        if weights_path.exists():
+            try:
+                model.load_state_dict(torch.load(weights_path, map_location="cpu"))
+                print(f"      [DL-MODEL] Loaded trained localization-aware weights from {weights_path.name}")
+            except Exception as e:
+                print(f"      [DL-MODEL] Using demonstration weights ({e})")
+        else:
+            print("      [DL-MODEL] Using baseline demonstration model weights.")
+        model.eval()
+        gradcam = DifferentiableGradCAM(model, target_layer)
+        img_tensor = torch.from_numpy(image).float().unsqueeze(0).unsqueeze(0) / 255.0
+        with torch.enable_grad():
+            logits, heatmaps = gradcam.compute_heatmap(img_tensor, target_classes=torch.tensor([1]), create_graph=False)
+        gradcam.remove_hook()
+        
+        heatmap = heatmaps.squeeze().detach().cpu().numpy()
+        mask = generate_roi_mask_from_heatmap(heatmap, threshold=gradcam_threshold)
+        if np.sum(mask > 0) == 0:
+            print(f"      [WARN] Heatmap had no pixels >= {gradcam_threshold}. Relaxing threshold to 0.25.")
+            mask = generate_roi_mask_from_heatmap(heatmap, threshold=0.25)
+            
+        save_image((heatmap * 255).astype(np.uint8), results_dir / "gradcam_heatmap.png")
+        overlay = create_cam_overlay(image, heatmap, alpha=0.45)
+        Image.fromarray(overlay).save(results_dir / "gradcam_overlay.png")
+        print(f"      [DL-GRADCAM] Generated Grad-CAM heatmap and binary mask (active pixels: {np.sum(mask > 0):,}).")
+    else:
+        print("      [ROI-BASELINE] Using synthetic ground-truth reference mask.")
+        mask = synthetic_mask
         
     save_image(image, results_dir / "input_image.png")
     save_image(mask, results_dir / "roi_mask.png")
@@ -229,23 +277,24 @@ def run_demonstration(
     print(f"      Figure saved to: {plot_path.resolve()}")
     
     # Step 6: Authenticated Encryption & Tamper Detection
-    print("\n[6/7] Demonstrating Authenticated Encryption (AES-256-GCM)...")
-    key = generate_secure_key()
-    audit = demonstrate_tamper_detection(roi_payload, key=key)
+    print(f"\n[6/7] Demonstrating Authenticated Encryption ({crypto_algorithm})...")
+    audit = demonstrate_tamper_detection(roi_payload, algorithm=crypto_algorithm)
+    print(f"      Algorithm:                   {audit['encryption_algorithm']}")
     print(f"      Ciphertext envelope size:    {audit['envelope_length_bytes']:,} bytes")
     print(f"      Nonce size:                  {audit['nonce_length_bytes']} bytes (fresh per message)")
-    print(f"      Poly1305/GHASH tag overhead: {audit['overhead_bytes']} bytes")
+    print(f"      Tag / Overhead:              {audit['overhead_bytes']} bytes")
     print(f"      Authentic Decryption:        {'PASSED' if audit['unmodified_decryption_successful'] else 'FAILED'}")
     print(f"      Tamper Bit Inversion Test:   {'PASSED (Rejected)' if audit['tamper_detected'] else 'FAILED'}")
     
     # Step 7: Network Transmission Simulation
-    print("\n[7/7] Simulating Constrained Network Transmission (64 kbps, 120 ms latency, 5% loss)...")
+    print(f"\n[7/7] Simulating Constrained Network Transmission with {crypto_algorithm}...")
     tx_results = simulate_transmission(
         payload_bytes=roi_payload,
         bandwidth_bps=64 * 1024,
         latency_ms=120.0,
         loss_rate=0.05,
         priority_mode=True,
+        crypto_algorithm=crypto_algorithm,
         seed=42
     )
     print(f"      Total Chunks:           {tx_results['total_packets']}")
@@ -254,7 +303,9 @@ def run_demonstration(
     print(f"      Time to First ROI:      {tx_results['first_roi_time_sec']} sec")
     print(f"      Total Transfer Time:    {tx_results['total_time_sec']} sec")
     print(f"      Effective Throughput:   {tx_results['effective_throughput_kbps']} kbps")
-    print(f"      Transmission Reassembly: {'SUCCESSFUL' if tx_results['transmission_successful'] else 'FAILED'}")
+    print(f"      Crypto Processing Time: {tx_results['crypto_processing_time_ms']} ms")
+    print(f"      Stream Reassembly:      {'SUCCESSFUL' if tx_results['transmission_successful'] else 'FAILED'}")
+    print(f"      Integrity Verified:     {'PASSED' if tx_results['integrity_verified'] else 'FAILED'}")
     
     print("\n" + "=" * 78)
     print(" Demonstration Completed Successfully! All artifacts written to results/.")
@@ -558,7 +609,15 @@ def main() -> None:
     )
     parser.add_argument(
         "--mode",
-        choices=["demo", "experiment-compression", "experiment-transmission", "experiment-security"],
+        choices=[
+            "demo",
+            "experiment-compression",
+            "experiment-transmission",
+            "experiment-security",
+            "train-localization",
+            "benchmark-crypto",
+            "optimize"
+        ],
         default="demo",
         help="Execution mode (default: demo)."
     )
@@ -586,6 +645,24 @@ def main() -> None:
         default=25,
         help="JPEG quality factor for background (1-95, default: 25)."
     )
+    parser.add_argument(
+        "--roi-method",
+        choices=["synthetic", "gradcam"],
+        default="synthetic",
+        help="ROI extraction source: 'synthetic' (ground truth) or 'gradcam' (CNN saliency heatmap)."
+    )
+    parser.add_argument(
+        "--crypto",
+        choices=["AES-256-GCM", "AES-128-GCM", "ASCON-128"],
+        default="AES-256-GCM",
+        help="Authenticated encryption cipher (default: AES-256-GCM)."
+    )
+    parser.add_argument(
+        "--gradcam-threshold",
+        type=float,
+        default=0.45,
+        help="Saliency threshold for Grad-CAM binarization (default: 0.45)."
+    )
     
     args = parser.parse_args()
     
@@ -594,7 +671,10 @@ def main() -> None:
             image_path=args.image,
             output_dir=args.output_dir,
             q_roi=args.q_roi,
-            q_bg=args.q_bg
+            q_bg=args.q_bg,
+            roi_method=args.roi_method,
+            crypto_algorithm=args.crypto,
+            gradcam_threshold=args.gradcam_threshold
         )
         sys.exit(ret)
     elif args.mode == "experiment-compression":
@@ -606,6 +686,15 @@ def main() -> None:
     elif args.mode == "experiment-security":
         ret = run_experiment_security(output_dir=args.output_dir)
         sys.exit(ret)
+    elif args.mode == "train-localization":
+        run_localization_experiments(output_dir=args.output_dir)
+        sys.exit(0)
+    elif args.mode == "benchmark-crypto":
+        run_crypto_benchmarks(output_dir=args.output_dir)
+        sys.exit(0)
+    elif args.mode == "optimize":
+        run_cross_layer_optimization(output_dir=args.output_dir)
+        sys.exit(0)
 
 
 if __name__ == "__main__":

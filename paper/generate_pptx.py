@@ -221,7 +221,7 @@ def create_presentation(output_path: Path):
     steps = [
         ("Stage 1: Ingestion", "#1d4ed8", ["512x512 Grayscale Radiograph", "Format & dimension checks", "Synthetic CXR Phantom generator with permanent watermark", "Diagnostic ROI Mask"]),
         ("Stage 2: Compression", "#16a34a", ["Dual-stream JPEG baseline", "High ROI: q_roi = 90", "Lossy Context: q_bg = 25", "Packed 'MLDL' binary payload (9.8 KB / 26.6x ratio)"]),
-        ("Stage 3: Security", "#ca8a04", ["AES-256-GCM AEAD cipher", "Fresh 96-bit CSPRNG nonce", "128-bit Poly1305 auth tag", "100% bit-flip tamper detection (<0.005 ms latency)"]),
+        ("Stage 3: Security", "#ca8a04", ["AES-256-GCM AEAD cipher", "Fresh 96-bit CSPRNG nonce", "128-bit GHASH auth tag", "100% bit-flip tamper detection (<0.005 ms latency)"]),
         ("Stage 4: Transport", "#7c3aed", ["Packet chunking (1024 B)", "Priority Min-Heap Queue (Header > ROI > BG)", "Channel model (48-128 kbps, 2-10% loss, ARQ retry)", "Store-and-forward queue"]),
         ("Stage 5: Receiver", "#e11d48", ["Stream reassembly & hash verify", "AES-GCM tag authentication", "ROI-over-context reconstruction", "Partitioned PSNR & SSIM evaluation (metrics.csv)"])
     ]

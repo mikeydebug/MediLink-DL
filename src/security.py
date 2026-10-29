@@ -1,21 +1,27 @@
 """security.py: Authenticated Encryption and Integrity Protection for Medical Imagery.
 
 Part of MediLink-DL: Bandwidth-Adaptive Medical Image Transmission.
-Implements AES-256-GCM authenticated encryption, per-operation fresh nonce generation,
-and cryptographic tamper detection.
+Implements standardized authenticated encryption (AEAD) ciphers:
+  1. AES-256-GCM (NIST SP 800-38D baseline)
+  2. AES-128-GCM (NIST SP 800-38D lightweight baseline)
+  3. Ascon-AEAD128 (NIST SP 800-232 standardized lightweight AEAD)
+
+CRITICAL CRYPTOGRAPHIC AND INTEGRITY SPECIFICATIONS:
+  - Standard AES-GCM authenticates via GHASH over GF(2^128) producing a 128-bit tag.
+  - Ascon-AEAD128 operates on a 320-bit permutation state with 128-bit tag and rate 64 bits.
+  - Per-operation fresh nonces are strictly enforced via OS-level CSPRNG.
+  - Zero plaintext is released upon authentication or tag verification failure.
 """
 
 from __future__ import annotations
 
+import abc
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.exceptions import InvalidTag
 
-
-# Protocol constants
-NONCE_LENGTH_BYTES = 12   # 96-bit nonce standard for AES-GCM (NIST SP 800-38D)
-KEY_LENGTH_BITS = 256     # AES-256 provides 256-bit post-quantum resistant symmetric security
+from src.ascon import ascon_aead128_encrypt, ascon_aead128_decrypt
 
 
 class SecurityError(Exception):
@@ -24,134 +30,316 @@ class SecurityError(Exception):
 
 
 class DecryptionTamperedError(SecurityError):
-    """Raised when ciphertext authentication fails (tampering or wrong key)."""
+    """Raised when ciphertext authentication fails (tampering or corrupted tag)."""
     pass
 
 
-def generate_secure_key(bit_length: int = KEY_LENGTH_BITS) -> bytes:
-    """Generate a cryptographically secure random symmetric key.
+class AEADCipher(abc.ABC):
+    """Abstract Base Class defining a unified Authenticated Encryption with Associated Data (AEAD) interface."""
     
-    ACADEMIC & SECURITY ARCHITECTURE NOTE:
-    In this prototype, keys are generated via an OS-level CSPRNG (os.urandom).
-    In a real rural telemedicine production deployment, symmetric keys should NOT
-    be transmitted in plaintext or shared statically. Instead, deploy:
-    1. Hybrid Public-Key Encryption (HPKE, RFC 9180) or Ephemeral Elliptic Curve
-       Diffie-Hellman (ECDH over Curve25519) for key agreement between the rural
-       health center and the regional hospital PACS.
-    2. Mutual TLS 1.3 (mTLS) with hardware-backed client certificates (PKCS#11 / TPM).
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        """Official standardized cipher name."""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def key_length_bytes(self) -> int:
+        """Key length in bytes."""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def nonce_length_bytes(self) -> int:
+        """Nonce length in bytes."""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def tag_length_bytes(self) -> int:
+        """Authentication tag length in bytes."""
+        pass
+
+    @property
+    def overhead_bytes(self) -> int:
+        """Total envelope overhead added to plaintext payload (nonce + tag)."""
+        return self.nonce_length_bytes + self.tag_length_bytes
+
+    def generate_key(self) -> bytes:
+        """Generate a cryptographically secure random key."""
+        return os.urandom(self.key_length_bytes)
+
+    @abc.abstractmethod
+    def encrypt(
+        self,
+        plaintext: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None,
+        nonce: Optional[bytes] = None
+    ) -> bytes:
+        """Encrypt and authenticate payload, returning complete envelope (nonce + ciphertext + tag)."""
+        pass
+
+    @abc.abstractmethod
+    def decrypt(
+        self,
+        envelope: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None
+    ) -> bytes:
+        """Authenticate and decrypt envelope. Raises DecryptionTamperedError if tag fails."""
+        pass
+
+
+class AESGCMCipherBase(AEADCipher):
+    """AES-GCM Authenticated Encryption implementation (NIST SP 800-38D)."""
+    
+    def __init__(self, key_bytes: int):
+        self._key_bytes = key_bytes
+        self._nonce_bytes = 12  # Standard 96-bit nonce for AES-GCM
+        self._tag_bytes = 16    # 128-bit GHASH authentication tag
+
+    @property
+    def key_length_bytes(self) -> int:
+        return self._key_bytes
+
+    @property
+    def nonce_length_bytes(self) -> int:
+        return self._nonce_bytes
+
+    @property
+    def tag_length_bytes(self) -> int:
+        return self._tag_bytes
+
+    def encrypt(
+        self,
+        plaintext: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None,
+        nonce: Optional[bytes] = None
+    ) -> bytes:
+        if not isinstance(plaintext, (bytes, bytearray)):
+            raise TypeError(f"Plaintext must be bytes, got {type(plaintext)}")
+        if len(key) != self.key_length_bytes:
+            raise ValueError(f"{self.name} requires {self.key_length_bytes}-byte key, got {len(key)}")
+            
+        if nonce is None:
+            nonce = os.urandom(self.nonce_length_bytes)
+        elif len(nonce) != self.nonce_length_bytes:
+            raise ValueError(f"{self.name} requires {self.nonce_length_bytes}-byte nonce, got {len(nonce)}")
+            
+        aesgcm = AESGCM(key)
+        # AESGCM.encrypt returns [Ciphertext] + [16-byte GHASH tag]
+        ciphertext_and_tag = aesgcm.encrypt(nonce, bytes(plaintext), associated_data)
+        return nonce + ciphertext_and_tag
+
+    def decrypt(
+        self,
+        envelope: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None
+    ) -> bytes:
+        min_len = self.nonce_length_bytes + self.tag_length_bytes
+        if len(envelope) < min_len:
+            raise SecurityError(f"Envelope length ({len(envelope)}) shorter than header + tag minimum ({min_len}).")
+        if len(key) != self.key_length_bytes:
+            raise ValueError(f"{self.name} requires {self.key_length_bytes}-byte key, got {len(key)}")
+            
+        nonce = envelope[:self.nonce_length_bytes]
+        ciphertext_and_tag = envelope[self.nonce_length_bytes:]
+        aesgcm = AESGCM(key)
+        try:
+            plaintext = aesgcm.decrypt(nonce, ciphertext_and_tag, associated_data)
+            return plaintext
+        except InvalidTag as exc:
+            raise DecryptionTamperedError(
+                f"{self.name} integrity verification failed: GHASH tag mismatch or corrupted ciphertext."
+            ) from exc
+
+
+class AES256GCMCipher(AESGCMCipherBase):
+    """AES-256-GCM: 256-bit key, 96-bit nonce, 128-bit GHASH tag."""
+    def __init__(self):
+        super().__init__(key_bytes=32)
+
+    @property
+    def name(self) -> str:
+        return "AES-256-GCM"
+
+
+class AES128GCMCipher(AESGCMCipherBase):
+    """AES-128-GCM: 128-bit key, 96-bit nonce, 128-bit GHASH tag."""
+    def __init__(self):
+        super().__init__(key_bytes=16)
+
+    @property
+    def name(self) -> str:
+        return "AES-128-GCM"
+
+
+class Ascon128Cipher(AEADCipher):
+    """Ascon-AEAD128: 128-bit key, 128-bit nonce, 128-bit tag (NIST SP 800-232)."""
+    
+    @property
+    def name(self) -> str:
+        return "Ascon-AEAD128"
+
+    @property
+    def key_length_bytes(self) -> int:
+        return 16
+
+    @property
+    def nonce_length_bytes(self) -> int:
+        return 16
+
+    @property
+    def tag_length_bytes(self) -> int:
+        return 16
+
+    def encrypt(
+        self,
+        plaintext: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None,
+        nonce: Optional[bytes] = None
+    ) -> bytes:
+        if not isinstance(plaintext, (bytes, bytearray)):
+            raise TypeError(f"Plaintext must be bytes, got {type(plaintext)}")
+        if len(key) != 16:
+            raise ValueError(f"Ascon-AEAD128 requires 16-byte key, got {len(key)}")
+            
+        if nonce is None:
+            nonce = os.urandom(16)
+        elif len(nonce) != 16:
+            raise ValueError(f"Ascon-AEAD128 requires 16-byte nonce, got {len(nonce)}")
+            
+        ad = associated_data if associated_data is not None else b""
+        ciphertext, tag = ascon_aead128_encrypt(key, nonce, ad, bytes(plaintext))
+        # Format: [16-byte Nonce] + [Ciphertext] + [16-byte Tag]
+        return nonce + ciphertext + tag
+
+    def decrypt(
+        self,
+        envelope: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None
+    ) -> bytes:
+        min_len = 32  # 16-byte nonce + 16-byte tag
+        if len(envelope) < min_len:
+            raise SecurityError(f"Envelope length ({len(envelope)}) shorter than nonce+tag minimum ({min_len}).")
+        if len(key) != 16:
+            raise ValueError(f"Ascon-AEAD128 requires 16-byte key, got {len(key)}")
+            
+        nonce = envelope[:16]
+        tag = envelope[-16:]
+        ciphertext = envelope[16:-16]
+        ad = associated_data if associated_data is not None else b""
+        
+        try:
+            plaintext = ascon_aead128_decrypt(key, nonce, ad, ciphertext, tag)
+            return plaintext
+        except ValueError as exc:
+            raise DecryptionTamperedError(
+                f"Ascon-AEAD128 integrity verification failed: Tag mismatch or corrupted ciphertext."
+            ) from exc
+
+
+# Cipher Registry
+CIPHER_REGISTRY: Dict[str, AEADCipher] = {
+    "AES-256-GCM": AES256GCMCipher(),
+    "AES-128-GCM": AES128GCMCipher(),
+    "ASCON-128": Ascon128Cipher(),
+    "ASCON-AEAD128": Ascon128Cipher()
+}
+
+
+def get_aead_cipher(algorithm: str = "AES-256-GCM") -> AEADCipher:
+    """Retrieve AEAD cipher instance by standardized name.
     
     Args:
-        bit_length: Key length in bits (must be 128, 192, or 256).
-        
-    Returns:
-        bytes: 32 random bytes for AES-256.
+        algorithm: One of 'AES-256-GCM', 'AES-128-GCM', 'ASCON-128' / 'Ascon-AEAD128'.
     """
+    key = algorithm.strip().upper()
+    if key not in CIPHER_REGISTRY:
+        supported = list(CIPHER_REGISTRY.keys())
+        raise ValueError(f"Unsupported algorithm '{algorithm}'. Supported: {supported}")
+    return CIPHER_REGISTRY[key]
+
+
+# Top-level functional API for backwards compatibility
+NONCE_LENGTH_BYTES = 12
+KEY_LENGTH_BITS = 256
+
+
+def generate_secure_key(bit_length: int = 256, algorithm: Optional[str] = None) -> bytes:
+    """Generate cryptographically secure symmetric key.
+    
+    Args:
+        bit_length: Desired key length in bits (128, 192, or 256).
+        algorithm: If supplied, overrides bit_length with cipher's native key requirement.
+    """
+    if algorithm is not None:
+        cipher = get_aead_cipher(algorithm)
+        return cipher.generate_key()
+        
     if bit_length not in (128, 192, 256):
         raise ValueError(f"Unsupported key length {bit_length}. Must be 128, 192, or 256.")
-    return AESGCM.generate_key(bit_length=bit_length)
+    return os.urandom(bit_length // 8)
 
 
 def encrypt_payload(
     plaintext: bytes,
     key: bytes,
-    associated_data: Optional[bytes] = None
+    associated_data: Optional[bytes] = None,
+    algorithm: str = "AES-256-GCM"
 ) -> bytes:
-    """Encrypt and authenticate a medical image payload using AES-256-GCM.
-    
-    Format of returned envelope:
-    [12-byte Nonce] + [Ciphertext + 16-byte Poly1305/GHASH Auth Tag]
-    
-    Args:
-        plaintext: Raw data bytes to encrypt.
-        key: 32-byte AES-256 key.
-        associated_data: Optional unencrypted metadata bound to the auth tag (e.g. Patient ID hash).
-        
-    Returns:
-        bytes: Complete encrypted package (nonce prepended).
-    """
-    if not isinstance(plaintext, (bytes, bytearray)):
-        raise TypeError(f"Plaintext must be bytes, got {type(plaintext)}")
-    if len(key) != 32:
-        raise ValueError(f"AES-256 key must be exactly 32 bytes, got {len(key)}")
-        
-    # Generate fresh cryptographically random 96-bit nonce for EVERY invocation
-    nonce = os.urandom(NONCE_LENGTH_BYTES)
-    aesgcm = AESGCM(key)
-    
-    # AESGCM.encrypt returns ciphertext with appended 16-byte authentication tag
-    ciphertext_and_tag = aesgcm.encrypt(nonce, bytes(plaintext), associated_data)
-    
-    return nonce + ciphertext_and_tag
+    """Encrypt and authenticate a medical image payload using specified AEAD cipher."""
+    cipher = get_aead_cipher(algorithm)
+    return cipher.encrypt(plaintext, key, associated_data=associated_data)
 
 
 def decrypt_payload(
     envelope: bytes,
     key: bytes,
-    associated_data: Optional[bytes] = None
+    associated_data: Optional[bytes] = None,
+    algorithm: str = "AES-256-GCM"
 ) -> bytes:
-    """Decrypt and verify ciphertext envelope authenticity.
-    
-    Args:
-        envelope: [12-byte Nonce] + [Ciphertext + 16-byte Auth Tag].
-        key: 32-byte AES-256 key.
-        associated_data: Must match associated data supplied during encryption.
-        
-    Returns:
-        bytes: Original decrypted plaintext.
-        
-    Raises:
-        DecryptionTamperedError: If authentication tag fails verification (tampering detected).
-        SecurityError: If envelope is too short.
-    """
-    if len(envelope) < (NONCE_LENGTH_BYTES + 16):
-        raise SecurityError(
-            f"Envelope length ({len(envelope)}) is shorter than minimum nonce + tag header."
-        )
-    if len(key) != 32:
-        raise ValueError(f"AES-256 key must be exactly 32 bytes, got {len(key)}")
-        
-    nonce = envelope[:NONCE_LENGTH_BYTES]
-    ciphertext_and_tag = envelope[NONCE_LENGTH_BYTES:]
-    
-    aesgcm = AESGCM(key)
-    try:
-        plaintext = aesgcm.decrypt(nonce, ciphertext_and_tag, associated_data)
-        return plaintext
-    except InvalidTag as exc:
-        raise DecryptionTamperedError(
-            "Cryptographic integrity verification failed: Authentication tag mismatch or corrupted ciphertext."
-        ) from exc
+    """Decrypt and verify ciphertext envelope authenticity."""
+    cipher = get_aead_cipher(algorithm)
+    return cipher.decrypt(envelope, key, associated_data=associated_data)
 
 
 def demonstrate_tamper_detection(
     sample_payload: bytes,
-    key: Optional[bytes] = None
+    key: Optional[bytes] = None,
+    algorithm: str = "AES-256-GCM"
 ) -> Dict[str, Any]:
-    """Demonstrate encryption, successful decryption, and tamper detection.
-    
-    Returns an audit dictionary proving that modifying even one bit of the ciphertext
-    causes authentication verification to strictly fail.
-    """
+    """Demonstrate encryption, successful decryption, and tamper detection."""
+    cipher = get_aead_cipher(algorithm)
     if key is None:
-        key = generate_secure_key()
+        key = cipher.generate_key()
         
-    # Step 1: Encrypt
     aad = b"MediLink-DL:ClinicalHeader-V1"
-    envelope = encrypt_payload(sample_payload, key, associated_data=aad)
+    envelope = cipher.encrypt(sample_payload, key, associated_data=aad)
     
-    # Step 2: Decrypt unmodified
-    decrypted = decrypt_payload(envelope, key, associated_data=aad)
+    # Decrypt unmodified
+    decrypted = cipher.decrypt(envelope, key, associated_data=aad)
     success_unmodified = (decrypted == sample_payload)
     
-    # Step 3: Tamper with ciphertext by flipping a single bit at the midpoint
+    # Flip single bit at midpoint of ciphertext region
     tampered_envelope = bytearray(envelope)
-    flip_index = NONCE_LENGTH_BYTES + (len(envelope) - NONCE_LENGTH_BYTES) // 2
-    tampered_envelope[flip_index] ^= 0x01  # Invert lowest bit
+    nonce_len = cipher.nonce_length_bytes
+    tag_len = cipher.tag_length_bytes
+    ct_len = len(envelope) - nonce_len - tag_len
+    
+    flip_index = nonce_len + ct_len // 2 if ct_len > 0 else nonce_len
+    tampered_envelope[flip_index] ^= 0x01
     
     tamper_detected = False
     error_message = ""
     try:
-        decrypt_payload(bytes(tampered_envelope), key, associated_data=aad)
+        cipher.decrypt(bytes(tampered_envelope), key, associated_data=aad)
     except DecryptionTamperedError as exc:
         tamper_detected = True
         error_message = str(exc)
@@ -160,9 +348,9 @@ def demonstrate_tamper_detection(
         "payload_length_bytes": len(sample_payload),
         "envelope_length_bytes": len(envelope),
         "overhead_bytes": len(envelope) - len(sample_payload),
-        "encryption_algorithm": "AES-256-GCM",
-        "nonce_length_bytes": NONCE_LENGTH_BYTES,
-        "auth_tag_length_bytes": 16,
+        "encryption_algorithm": cipher.name,
+        "nonce_length_bytes": cipher.nonce_length_bytes,
+        "auth_tag_length_bytes": cipher.tag_length_bytes,
         "unmodified_decryption_successful": success_unmodified,
         "tamper_injection_index": flip_index,
         "tamper_detected": tamper_detected,

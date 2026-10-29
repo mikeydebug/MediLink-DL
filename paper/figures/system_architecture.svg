@@ -142,7 +142,7 @@
     <rect x="15" y="152" width="150" height="72" rx="6" fill="#ffffff" stroke="#facc15" />
     <text x="23" y="172" font-size="11" font-weight="700" fill="#854d0e">Nonce &amp; Tag Discipline</text>
     <text x="23" y="188" font-size="10" fill="#475569">• 96-bit fresh Nonce</text>
-    <text x="23" y="202" font-size="10" fill="#475569">• 128-bit Poly1305 Tag</text>
+    <text x="23" y="202" font-size="10" fill="#475569">• 128-bit GHASH Tag</text>
     <text x="23" y="216" font-size="9" fill="#16a34a">Overhead: 28 bytes total</text>
 
     <path d="M 90 224 L 90 248" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)" />

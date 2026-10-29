@@ -1,0 +1,12 @@
+config_id,roi_source,compression_profile,q_roi,q_bg,chunk_size_bytes,priority_scheduling,crypto_algorithm,compressed_payload_bytes,total_wire_bytes,wire_overhead_ratio,psnr_global_db,ssim_global,psnr_roi_db,ssim_roi,psnr_bg_db,ssim_bg,total_time_sec,first_roi_time_sec,crypto_processing_time_ms,retransmissions,throughput_kbps
+2,synthetic,ROI-Aware-High,90,25,512,True,AES-128-GCM,4543,4851,1.07,30.04,0.8391,38.54,0.9544,29.99,0.837,1.998,0.328,0.249,0,18.19
+8,synthetic,ROI-Aware-High,90,25,1024,True,AES-128-GCM,4543,4711,1.04,30.04,0.8391,38.54,0.9544,29.99,0.837,1.342,0.359,0.04,0,27.08
+13,synthetic,ROI-Aware-High,90,25,2048,True,AES-256-GCM,4543,4655,1.02,30.04,0.8391,38.54,0.9544,29.99,0.837,1.079,0.359,0.049,0,33.67
+14,synthetic,ROI-Aware-High,90,25,2048,True,AES-128-GCM,4543,5445,1.2,30.04,0.8391,38.54,0.9544,29.99,0.837,1.544,0.823,0.031,1,23.54
+17,synthetic,ROI-Aware-High,90,25,2048,False,AES-128-GCM,4543,4655,1.02,30.04,0.8391,38.54,0.9544,29.99,0.837,1.079,1.079,0.031,0,33.67
+20,synthetic,ROI-Aware-Medium,85,20,512,True,AES-128-GCM,3909,4189,1.07,29.24,0.8279,36.61,0.9416,29.2,0.8262,1.789,0.328,0.054,0,17.48
+31,synthetic,ROI-Aware-Medium,85,20,2048,True,AES-256-GCM,3909,4021,1.03,29.24,0.8279,36.61,0.9416,29.2,0.8262,1.002,0.342,0.032,0,31.21
+35,synthetic,ROI-Aware-Medium,85,20,2048,False,AES-128-GCM,3909,4021,1.03,29.24,0.8279,36.61,0.9416,29.2,0.8262,1.002,1.002,0.028,0,31.21
+37,synthetic,ROI-Aware-Aggressive,80,15,512,True,AES-256-GCM,3274,4066,1.24,28.17,0.808,36.19,0.933,28.12,0.8019,2.014,0.328,0.052,1,13.0
+39,synthetic,ROI-Aware-Aggressive,80,15,512,True,ASCON-128,3274,3562,1.09,28.17,0.808,36.19,0.933,28.12,0.8019,1.585,0.329,8.77,0,16.52
+50,synthetic,ROI-Aware-Aggressive,80,15,2048,True,AES-128-GCM,3274,3386,1.03,28.17,0.808,36.19,0.933,28.12,0.8019,0.925,0.332,0.028,0,28.33

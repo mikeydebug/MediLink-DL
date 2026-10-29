@@ -108,3 +108,26 @@ def test_transmission_store_and_forward_simulation():
     assert results["transmission_successful"] is True
     assert results["total_time_sec"] >= 1.5
     assert results["store_and_forward_tested"] is True
+
+
+@pytest.mark.parametrize("cipher_name", ["AES-256-GCM", "AES-128-GCM", "ASCON-128"])
+def test_transmission_with_authenticated_encryption(cipher_name):
+    """Verify network transmission functions with AEAD chunk encryption and authentication."""
+    phantom, mask, _ = generate_synthetic_cxr_phantom(width=128, height=128, seed=42)
+    _, payload, _ = compress_roi_aware(phantom, mask, q_roi=80, q_bg=20)
+    
+    results = simulate_transmission(
+        payload_bytes=payload,
+        bandwidth_bps=128 * 1024,
+        latency_ms=25.0,
+        loss_rate=0.05,
+        chunk_size=512,
+        priority_mode=True,
+        crypto_algorithm=cipher_name,
+        seed=42
+    )
+    
+    assert results["transmission_successful"] is True
+    assert results["integrity_verified"] is True
+    assert results["crypto_algorithm"] in (cipher_name, "Ascon-AEAD128")
+    assert results["crypto_processing_time_ms"] >= 0.0

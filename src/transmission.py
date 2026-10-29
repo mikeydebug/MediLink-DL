@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from src.roi_compression import deserialize_dual_stream_payload, ROICompressionError
+from src.security import get_aead_cipher
 
 
 @dataclass(order=True)
@@ -221,9 +222,17 @@ class Receiver:
         """Reassemble sorted packets into original binary payload."""
         if not self.is_complete():
             raise ValueError("Cannot reassemble: incomplete packet stream.")
-        sorted_ids = sorted(self.received_packets.keys())
-        chunks = [self.received_packets[pid].data for pid in sorted_ids]
-        return b"".join(chunks)
+        # If payload contains structured dual-stream packet types, group as Header + BG + ROI
+        has_dual_types = any(p.payload_type in ("HEADER", "ROI", "BG") for p in self.received_packets.values())
+        if has_dual_types:
+            hdr_chunks = [p.data for pid, p in sorted(self.received_packets.items()) if p.payload_type == "HEADER"]
+            bg_chunks = [p.data for pid, p in sorted(self.received_packets.items()) if p.payload_type == "BG"]
+            roi_chunks = [p.data for pid, p in sorted(self.received_packets.items()) if p.payload_type == "ROI"]
+            return b"".join(hdr_chunks + bg_chunks + roi_chunks)
+        else:
+            sorted_ids = sorted(self.received_packets.keys())
+            chunks = [self.received_packets[pid].data for pid in sorted_ids]
+            return b"".join(chunks)
 
 
 class StoreAndForwardQueue:
@@ -256,7 +265,9 @@ def simulate_transmission(
     receiver_temporarily_offline: bool = False,
     offline_duration_sec: float = 2.0,
     seed: int = 42,
-    max_retries: int = 10
+    max_retries: int = 10,
+    crypto_algorithm: Optional[str] = None,
+    crypto_key: Optional[bytes] = None
 ) -> Dict[str, Any]:
     """Execute complete application-level network transmission simulation.
     
@@ -287,6 +298,20 @@ def simulate_transmission(
         packets = chunk_data(payload_bytes, chunk_size=chunk_size, payload_type="UNIFORM", priority_level=1)
         for p in packets:
             p.total_packets = len(packets)
+
+    # 2. Optional Authenticated Encryption per chunk
+    crypto_time_sec = 0.0
+    cipher = None
+    if crypto_algorithm is not None:
+        cipher = get_aead_cipher(crypto_algorithm)
+        if crypto_key is None:
+            crypto_key = cipher.generate_key()
+        t_enc_start = time.perf_counter()
+        for p in packets:
+            aad = f"Pkt:{p.packet_id}:{p.payload_type}".encode("utf-8")
+            p.data = cipher.encrypt(p.data, crypto_key, associated_data=aad)
+            p.checksum = compute_checksum(p.data)
+        crypto_time_sec += (time.perf_counter() - t_enc_start)
             
     # Priority queue (min-heap using packet.priority)
     send_queue = list(packets)
@@ -343,9 +368,29 @@ def simulate_transmission(
     effective_throughput_kbps = (
         (len(payload_bytes) * 8.0) / (total_time_sec * 1000.0)
     ) if total_time_sec > 0 else 0.0
+
+    # Authenticated Decryption and Stream Reassembly Verification
+    decryption_success = False
+    if receiver.is_complete():
+        if cipher is not None and crypto_key is not None:
+            t_dec_start = time.perf_counter()
+            try:
+                for pid, p in receiver.received_packets.items():
+                    aad = f"Pkt:{p.packet_id}:{p.payload_type}".encode("utf-8")
+                    p.data = cipher.decrypt(p.data, crypto_key, associated_data=aad)
+                reassembled = receiver.reassemble_stream()
+                decryption_success = (reassembled == payload_bytes)
+            except Exception:
+                decryption_success = False
+            crypto_time_sec += (time.perf_counter() - t_dec_start)
+        else:
+            reassembled = receiver.reassemble_stream()
+            decryption_success = (reassembled == payload_bytes)
     
     return {
         "priority_mode_enabled": priority_mode,
+        "crypto_algorithm": cipher.name if cipher is not None else "NONE (Unencrypted)",
+        "crypto_processing_time_ms": round(crypto_time_sec * 1000.0, 3),
         "payload_bytes": len(payload_bytes),
         "total_packets": len(packets),
         "chunk_size": chunk_size,
@@ -360,5 +405,6 @@ def simulate_transmission(
         "first_roi_time_sec": round(first_roi_time_sec, 3) if first_roi_time_sec else "N/A",
         "effective_throughput_kbps": round(effective_throughput_kbps, 2),
         "transmission_successful": receiver.is_complete(),
+        "integrity_verified": decryption_success,
         "store_and_forward_tested": receiver_temporarily_offline,
     }

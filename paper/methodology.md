@@ -79,17 +79,21 @@ Let $I$ be the reference image and $\hat{I}$ be the reconstructed image.
 
 ---
 
-## 6. Cryptographic Security Protocol
-- **Cipher**: AES-256 in Galois/Counter Mode (AES-GCM, NIST SP 800-38D).
-- **Nonce Discipline**: Every encryption invocation generates a cryptographically random 96-bit nonce ($N \leftarrow \text{CSPRNG}(12)$). Nonces are never reused.
+## 6. Cryptographic Security Protocol and AEAD Suite
+To secure medical transmissions across untrusted public telecommunication networks while evaluating computational overhead on constrained field nodes, MediLink-DL integrates three standardized Authenticated Encryption with Associated Data (AEAD) ciphers:
+1. **AES-256-GCM (NIST SP 800-38D Baseline)**: 256-bit symmetric key, 96-bit CSPRNG nonce, and 128-bit GHASH authentication tag over $GF(2^{128})$ (28-byte wire overhead).
+2. **AES-128-GCM (NIST SP 800-38D Lightweight Baseline)**: 128-bit key, 96-bit nonce, and 128-bit GHASH tag (28-byte overhead).
+3. **Ascon-AEAD128 (NIST SP 800-232 Standardized Lightweight Cipher)**: 128-bit key, 128-bit nonce, and 128-bit tag operating over a 320-bit permutation state with rate 64 bits (32-byte wire overhead).
+
+- **Nonce Discipline**: Every encryption invocation generates a fresh CSPRNG nonce ($N \leftarrow \text{CSPRNG}$). Nonce reuse is strictly prohibited.
 - **Envelope Structure**:
-  $$\text{Envelope} = N \,\|\, \text{AES-GCM-Enc}_{K}(N, \mathcal{P}, \text{AAD})$$
-- **Tamper Detection**: Verification of the 128-bit authentication tag guarantees detection of unauthorized modification.
+  $$\text{Envelope} = N \,\|\, \text{AEAD-Enc}_{K}(N, \mathcal{P}, \text{AAD})$$
+- **Tamper Detection**: Verification of the 128-bit authentication tag guarantees detection of unauthorized modification. Zero plaintext is released upon verification failure.
 
 ---
 
 ## 7. Priority-Based Network Transmission Simulation
-- **Packetization**: Payloads are partitioned into $L$-byte chunks (default 1024 bytes) framed with a sequence ID, total packet count, payload type, and SHA-256 checksum.
+- **Packetization**: Payloads are partitioned into $L$-byte chunks ($L \in \{256, 512, 1024, 2048\}$ bytes) framed with a sequence ID, total packet count, payload type, and SHA-256 checksum.
 - **Priority Scheduling**: Chunks are queued in a min-heap priority queue:
   - Header Chunks: Priority 30 (highest)
   - ROI Diagnostic Chunks: Priority 20
@@ -99,3 +103,32 @@ Let $I$ be the reference image and $\hat{I}$ be the reconstructed image.
   - One-way Latency: $D = 120\text{ ms}$
   - Packet Loss Probability: $P_{\text{loss}} \in [0.0, 0.15]$
 - **Store-and-Forward**: A local persistent FIFO buffer handles upstream disconnections, holding packets until the link is restored.
+
+---
+
+## 8. Differentiable Grad-CAM and Localization-Aware Training
+Standard classification networks are optimized exclusively against categorical cross-entropy $L_{\text{cls}}$, frequently leading to saliency maps that activate on irrelevant contextual artifacts. To direct feature representations toward diagnostically relevant pathology, we introduce a differentiable localization loss backpropagated through second-order autograd:
+
+1. **Differentiable Grad-CAM Generation**:
+   Let $A \in \mathbb{R}^{B \times C \times H_f \times W_f}$ be target convolutional feature activations, and $Y^c$ be the logit for pathology class $c$. Gradients are computed with `create_graph=True`:
+   $$\alpha_k^c = \frac{1}{H_f W_f} \sum_{i=1}^{H_f} \sum_{j=1}^{W_f} \frac{\partial Y^c}{\partial A_{k,i,j}}$$
+   The continuous activation map is synthesized via ReLU combination, bilinearly interpolated to input dimensions $(H, W)$, and min-max normalized differentiably:
+   $$H = \frac{\text{Interp}(\text{ReLU}(\sum_k \alpha_k^c A_k)) - c_{\min}}{c_{\max} - c_{\min} + \epsilon}$$
+
+2. **Localization Loss Formulations**:
+   - **Saliency Alignment Loss ($L_{\text{align}}$)**: Penalizes gradient energy situated outside reference mask $M$:
+     $$L_{\text{align}} = 1.0 - \frac{\sum_{i,j} (H_{i,j} \cdot M_{i,j})}{\sum_{i,j} H_{i,j} + \epsilon}$$
+   - **Soft Continuous Dice Loss ($L_{\text{dice}}$)**: Directly optimizes regional spatial overlap:
+     $$L_{\text{dice}} = 1.0 - \frac{2 \sum_{i,j} (H_{i,j} \cdot M_{i,j}) + \epsilon}{\sum_{i,j} H_{i,j} + \sum_{i,j} M_{i,j} + \epsilon}$$
+   - **Composite Objective**:
+     $$L_{\text{total}} = L_{\text{cls}} + \lambda_{\text{loc}} (L_{\text{align}} + \beta L_{\text{dice}})$$
+
+---
+
+## 9. Multi-Objective Cross-Layer Optimization and Pareto Frontier
+We formulate the cross-layer parameter selection problem across DL, DIP, CN, and Cryptography as a constrained multi-objective optimization:
+$$\min_{\mathbf{x} \in \mathcal{X}} \left[ - \text{SSIM}_{\text{roi}}(\mathbf{x}), \; T_{\text{roi}}(\mathbf{x}), \; T_{\text{total}}(\mathbf{x}), \; B_{\text{wire}}(\mathbf{x}), \; t_{\text{crypto}}(\mathbf{x}) \right]$$
+subject to:
+$$\text{AuthVerified}(\mathbf{x}) = \text{True}, \quad \text{ReconSuccess}(\mathbf{x}) = \text{True}$$
+where decision vector $\mathbf{x} = (\text{ROI\_Source}, q_{\text{roi}}, q_{\text{bg}}, L_{\text{chunk}}, \text{Priority}, \text{Cipher})$.
+A configuration $\mathbf{x}_A$ dominates $\mathbf{x}_B$ ($\mathbf{x}_A \succ \mathbf{x}_B$) if it is no worse across all objectives and strictly superior in at least one. The non-dominated set $\mathcal{P} \subset \mathcal{X}$ defines the Pareto frontier.
