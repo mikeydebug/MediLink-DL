@@ -42,7 +42,17 @@ checkpoints/
 # Large datasets (keep directory structure with .gitkeep)
 data/*
 !data/.gitkeep
+!data/README.md
 !data/samples/
+!data/real_cxr/
+data/real_cxr/images/
+*.jpg
+*.jpeg
+*.png
+!results/*.png
+!data/samples/*.png
+!data/samples/*.jpg
+
 
 # Generated runtime outputs and caches
 *.log

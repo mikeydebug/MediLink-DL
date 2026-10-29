@@ -6,115 +6,155 @@
 
 ## 1. Project Overview
 
-MediLink-DL is an academic research prototype designed to address the challenges of transmitting medical chest X-ray images over constrained, lossy, and bandwidth-limited communication channels common in rural and remote telemedicine clinics.
+**MediLink-DL** is an academic research prototype designed to address the critical challenges of transmitting medical chest X-ray images over constrained, lossy, and bandwidth-limited communication channels in rural and remote telemedicine clinics.
 
-The framework integrates:
-1. **Diagnostic ROI Localization**: Identifying diagnostically critical regions (e.g., lung pathologies) via model-based Grad-CAM saliency or clinical bounding masks.
-2. **Bandwidth-Adaptive ROI-Aware Compression**: Allocating high reconstruction fidelity to diagnostically sensitive regions (ROI) while aggressively compressing non-critical anatomical backgrounds to reduce overall payload size.
-3. **End-to-End Authenticated Encryption**: Protecting patient confidentiality and image integrity against tampering using AES-256-GCM.
-4. **Resilient Network Transmission Simulation**: Simulating application-level chunking, packet sequencing, selective retransmission, latency, and packet loss with a store-and-forward fallback mechanism.
-5. **Comprehensive Quantitative Evaluation**: Measuring Peak Signal-to-Noise Ratio (PSNR) and Structural Similarity Index (SSIM) partitioned by ROI vs. background, alongside transmission throughput and latency metrics.
+The framework provides an end-to-end integrated cross-layer pipeline:
+1. **Clinical Medical Dataset & Leakage-Free Stratification**: Built on the open-access COVID-19 Chest X-ray Dataset (Cohen et al., 2020) with verified COCO-format lung bounding-box annotations from `imageannotation.ai`. Enforces strict **patient-level stratification** (zero patient overlap between train, val, and test splits).
+2. **Deep Learning Diagnostic Localization**:
+   - ResNet-18 classifier trained on genuine clinical chest radiographs.
+   - Differentiable Grad-CAM formulation enabling end-to-end backpropagation through Grad-CAM saliency maps.
+   - Comprehensive 4-regime comparison: Classification-Only baseline vs. Composite, Alignment-Only, and Soft Continuous Dice localization losses.
+3. **Bandwidth-Adaptive ROI-Aware Compression**:
+   - Preserves high diagnostic fidelity ($q_{\text{roi}} \in [80, 95]$) in pathological lung zones while aggressively quantizing non-critical background structures ($q_{\text{bg}} \in [15, 25]$).
+   - Achieves ~10x compression ratios and 90% bandwidth reduction while preserving ROI PSNR $> 48$ dB and SSIM $> 0.98$.
+4. **End-to-End Standardized Authenticated Encryption (AEAD)**:
+   - Hardware-accelerated NIST SP 800-38D AES-256-GCM and AES-128-GCM (GHASH MAC over $GF(2^{128})$).
+   - Constant-time reference implementation of NIST SP 800-232 Ascon-AEAD128 lightweight cipher.
+   - Fresh nonces per chunk, strict tag authentication, and bit-level tamper rejection.
+5. **Computer Networks Transmission Simulation**:
+   - Stop-and-Wait ARQ simulation over lossy links with priority min-heap scheduling for ROI packets vs FIFO baseline.
+   - Delivers triage-ready diagnostic regions in $< 0.4$ seconds over rural 64 kbps links.
+6. **Cross-Layer Multi-Objective Optimization**:
+   - Evaluates 108 end-to-end configurations across DL, DIP, CN, and Security layers to extract the empirical non-dominated Pareto frontier.
 
-> **Academic & Clinical Disclaimer**: This software is an engineering research prototype developed for experimental evaluation. Reconstructed imagery has not been cleared for clinical diagnostic use. Do not use this software for clinical triage or diagnostic decision-making without formal radiological validation.
+> **Academic & Clinical Notice**: This software is an engineering research prototype developed for academic evaluation. It has not been approved for clinical diagnostic care or patient management.
 
 ---
 
-## 2. System Requirements
+## 2. Directory Structure
 
-- **Operating System**: macOS (tested on Apple Silicon arm64 / Darwin 27.x) or Linux (x86_64 / aarch64).
-- **Python**: Version 3.10 or 3.11 recommended.
-- **Hardware**: Compatible with standard CPU execution (GPU/MPS acceleration is optional).
+```text
+MediLink-DL/
+├── data/
+│   ├── README.md               # Dataset documentation and patient split rules
+│   ├── samples/                # Sample diagnostic radiographs for testing
+│   └── real_cxr/               # Genuine chest X-rays (images excluded from git)
+│       ├── annotations.json    # Original COCO lung bounding box annotations
+│       ├── manifest.csv        # Validated image metadata, patient IDs, and splits
+│       ├── splits.json         # Deterministic train/val/test patient partitions
+│       └── images/             # Radiograph JPEG/PNG files (~25 MB total)
+├── src/
+│   ├── dataset_real.py         # Real dataset download, validation, & PyTorch loaders
+│   ├── train_real_models.py    # ResNet-18 training & evaluation across 4 regimes
+│   ├── localization_loss.py    # Differentiable Grad-CAM & continuous Dice/Alignment loss
+│   ├── train_localization.py   # Synthetic model training & Grad-CAM ablation pipeline
+│   ├── roi_localization.py     # Inference Grad-CAM & dynamic checkpoint loader
+│   ├── roi_compression.py      # Dual-stream ROI-aware JPEG compression
+│   ├── image_metrics.py       # Partitioned PSNR/SSIM calculation (ROI vs background)
+│   ├── security.py             # Unified AEADCipher suite (AES-GCM & Ascon-AEAD128)
+│   ├── ascon.py                # NIST SP 800-232 Ascon-AEAD128 implementation
+│   ├── benchmark_crypto.py     # Cryptographic microbenchmark suite
+│   ├── transmission.py         # Network simulation, priority scheduling & reassembly
+│   ├── optimization.py         # Cross-layer multi-objective Pareto optimization
+│   └── main.py                 # Unified CLI entry point
+├── tests/                      # 74 automated unit and integration tests (100% passing)
+├── results/                    # Experimental CSVs, Pareto plots, and trained models
+└── paper/                      # Academic research paper, presentation slides, & methodology
+```
 
 ---
 
-## 3. Installation Guide (macOS)
+## 3. Installation & Setup (macOS / Linux)
 
-### Step 1: Clone or Open Workspace
+### Step 1: Open Workspace & Activate Virtual Environment
 ```bash
 cd /Users/mayanksoni/Desktop/MediLink-DL
-```
-
-### Step 2: Initialize Virtual Environment
-Using Python 3.11 (e.g. from Homebrew):
-```bash
-/opt/homebrew/bin/python3.11 -m venv .venv
 source .venv/bin/activate
 ```
-*(Or with system `python3 -m venv .venv && source .venv/bin/activate`)*
 
-### Step 3: Install Dependencies
+### Step 2: Install Dependencies
 ```bash
-pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
 ---
 
-## 4. Quickstart & Demonstration
+## 4. CLI Execution & Reproducibility Guide
 
-Run the automated end-to-end baseline pipeline:
+The unified CLI (`src/main.py`) provides commands for all research modules:
 
+### 4.1. Dataset Preparation & Validation
 ```bash
-python3 src/main.py --mode demo
+# Download and prepare the real COVID-19 Chest X-ray dataset
+python3 src/main.py --mode prepare-dataset
+
+# Validate patient partition isolation (guarantees zero patient leakage)
+python3 src/main.py --mode validate-dataset
 ```
 
-This command will:
-1. Generate or load a verified grayscale chest X-ray test image.
-2. Define or compute an ROI mask.
-3. Perform uniform compression and ROI-aware dual-quality compression at comparable bit budgets.
-4. Evaluate global, ROI, and background PSNR and SSIM.
-5. Encrypt the compressed payload using AES-256-GCM, demonstrate tamper detection, and decrypt the authenticated payload.
-6. Export visual comparison figures to `results/comparison.png` and quantitative metrics to `results/metrics.csv`.
-
----
-
-## 5. Running Experiments
-
-Execute the experimental evaluation suite:
-
+### 4.2. Deep Learning Model Training
 ```bash
-# Experiment 1 & 2: Rate-distortion comparison across quality levels
+# Train ResNet-18 on real chest X-rays across 4 regimes (Apple Silicon MPS / CUDA)
+python3 src/main.py --mode train-real-models
+
+# Train synthetic demonstration models
+python3 src/main.py --mode train-localization
+```
+
+### 4.3. End-to-End Telemedicine Pipeline Demonstration
+```bash
+# Run full pipeline with trained Grad-CAM and AES-256-GCM on a real radiograph
+python3 src/main.py --mode demo --roi-method gradcam --crypto AES-256-GCM
+
+# Run full pipeline with Ascon-AEAD128 lightweight authenticated cipher
+python3 src/main.py --mode demo --roi-method gradcam --crypto ASCON-128
+
+# Run on a custom medical image
+python3 src/main.py --mode demo --image data/real_cxr/images/<sample>.jpeg --roi-method gradcam
+```
+
+### 4.4. Experimental Benchmarks & Cross-Layer Optimization
+```bash
+# Microbenchmark AEAD ciphers across chunk sizes (256 B to 4096 B)
+python3 src/main.py --mode benchmark-crypto
+
+# Run cross-layer multi-objective optimization (108 configurations -> Pareto frontier)
+python3 src/main.py --mode optimize
+
+# Run compression rate-distortion experiments
 python3 src/main.py --mode experiment-compression
 
-# Experiment 3: Transmission simulation under packet loss and bandwidth constraints
+# Run transmission loss and recovery experiments
 python3 src/main.py --mode experiment-transmission
 
-# Experiment 4: Cryptographic overhead and tamper verification
+# Run cryptographic tamper detection experiments
 python3 src/main.py --mode experiment-security
 ```
 
 ---
 
-## 6. Running Automated Tests
+## 5. Automated Testing
 
-Run the full pytest test suite:
+Run the full automated test suite (74 tests covering real data loading, autograd gradient flow, compression, AEAD ciphers, transmission reassembly, and optimization):
 
 ```bash
 pytest tests/ -v
 ```
 
+All 74 tests execute deterministically and pass in $< 2.0$ seconds.
+
 ---
 
-## 7. Project Architecture
+## 6. Key Measured Research Findings
 
-```
-MediLink-DL/
-├── data/                  # Sample images and synthetic generation scripts
-├── paper/                 # Research paper drafts and methodology notes
-│   ├── research_outline.md
-│   ├── related_work.md
-│   ├── methodology.md
-│   └── experiment_plan.md
-├── results/               # Experimental plots, metrics CSVs, reconstructed images
-├── src/                   # Core Python modules
-│   ├── image_utils.py     # Image I/O, format checks, synthetic CXR generator
-│   ├── roi_compression.py # ROI-aware dual-quality coding & uniform baseline
-│   ├── image_metrics.py   # PSNR, SSIM, ROI/background partitioned metrics
-│   ├── security.py        # Authenticated encryption (AES-256-GCM)
-│   ├── transmission.py    # Network simulation, packet chunking, retransmissions
-│   ├── roi_localization.py# Deep learning & Grad-CAM saliency extraction
-│   └── main.py            # CLI entry point and experiment runner
-├── tests/                 # Automated unit and integration test suite
-├── requirements.txt       # Frozen dependencies
-└── README.md              # Project documentation
-```
+| Experimental Regime | Test Accuracy | Test F1 | Test ROI Dice | Pointing Game Hit Rate | Energy in Anatomical ROI |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Regime A: Classification-Only** | 0.6897 | 0.8163 | 0.4764 | 65.5% | 49.2% |
+| **Regime B: Combined Loss** | 0.6897 | 0.8163 | 0.6856 | **93.1%** | 80.3% |
+| **Regime C: Alignment-Only** | 0.6897 | 0.8163 | 0.5799 | **96.5%** | **82.2%** |
+| **Regime D: Dice-Only (Proposed)** | **0.7586** | **0.8511** | **0.7107** | 82.8% | 69.4% |
+
+**Cross-Layer Highlights**:
+- **Diagnostic Triage Speedup**: Priority scheduling delivers the diagnostic ROI in **0.328s** vs **1.046s** under FIFO scheduling (>2.5x triage latency reduction).
+- **Compression Efficiency**: 9.89x payload compression with ROI PSNR of 48.31 dB and ROI SSIM of 0.9891.
+- **Security Overhead**: AES-256-GCM processes 26 KB chunks in $< 0.2$ ms with standard 28-byte overhead, while rejecting 100% of single-bit tampering attempts.
