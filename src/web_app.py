@@ -615,7 +615,7 @@ select:focus, input[type="text"]:focus {
     <span class="badge primary">Cohen et al. COVID-19 CXR</span>
     <span class="badge">MedicalResNet18 (MPS)</span>
     <span class="badge purple">Diffusion &amp; MLMC Lab</span>
-    <span class="badge active" style="background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399;">144/144 Pytest Passed (100%)</span>
+    <span class="badge active" style="background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399;">145/145 Pytest Passed (100%)</span>
   </div>
 </header>
 
@@ -681,6 +681,7 @@ select:focus, input[type="text"]:focus {
           <option value="AES-256-GCM" selected>AES-256-GCM (NIST SP 800-38D)</option>
           <option value="AES-128-GCM">AES-128-GCM (NIST SP 800-38D)</option>
           <option value="ASCON-128">Ascon-AEAD128 (NIST SP 800-232)</option>
+          <option value="MLMC-128">MLMC-128 (Research Candidate - Mini-AES)</option>
         </select>
       </div>
 
@@ -837,7 +838,7 @@ select:focus, input[type="text"]:focus {
       Every image packet binds Associated Authenticated Data (AAD) containing packet sequence number, stream type, and patient metadata.
     </p>
 
-    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
       <button class="btn-primary" style="width: auto; padding: 8px 18px;" onclick="runTamperTest('AES-256-GCM')">
         Test AES-256-GCM Single Bit-Flip
       </button>
@@ -846,6 +847,9 @@ select:focus, input[type="text"]:focus {
       </button>
       <button class="btn-primary" style="width: auto; padding: 8px 18px; background: linear-gradient(135deg, #d97706, #f59e0b);" onclick="runTamperTest('AES-128-GCM')">
         Test AES-128-GCM Single Bit-Flip
+      </button>
+      <button class="btn-primary" style="width: auto; padding: 8px 18px; background: linear-gradient(135deg, #7c3aed, #a855f7);" onclick="runTamperTest('MLMC-128')">
+        Test MLMC-128 (Research Mini-AES) Bit-Flip
       </button>
     </div>
 

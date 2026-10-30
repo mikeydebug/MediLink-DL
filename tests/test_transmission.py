@@ -110,7 +110,7 @@ def test_transmission_store_and_forward_simulation():
     assert results["store_and_forward_tested"] is True
 
 
-@pytest.mark.parametrize("cipher_name", ["AES-256-GCM", "AES-128-GCM", "ASCON-128"])
+@pytest.mark.parametrize("cipher_name", ["AES-256-GCM", "AES-128-GCM", "ASCON-128", "MLMC-128"])
 def test_transmission_with_authenticated_encryption(cipher_name):
     """Verify network transmission functions with AEAD chunk encryption and authentication."""
     phantom, mask, _ = generate_synthetic_cxr_phantom(width=128, height=128, seed=42)

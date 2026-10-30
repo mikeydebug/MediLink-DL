@@ -245,12 +245,65 @@ class Ascon128Cipher(AEADCipher):
             ) from exc
 
 
+class MLMC128Cipher(AEADCipher):
+    """Academic Research Prototype: MLMC-128 (MediLink Mini Cipher).
+    
+    128-bit block cipher candidate with 10 rounds, PRESENT 4-bit S-box,
+    non-Hadamard involutory MDS diffusion, and CTR-GHASH authenticated encryption mode.
+    Note: For academic research evaluation; clinical data defaults to AES/Ascon.
+    """
+
+    @property
+    def name(self) -> str:
+        return "MLMC-128"
+
+    @property
+    def key_length_bytes(self) -> int:
+        return 16  # 128-bit key
+
+    @property
+    def nonce_length_bytes(self) -> int:
+        return 12  # 96-bit nonce
+
+    @property
+    def tag_length_bytes(self) -> int:
+        return 16  # 128-bit GHASH tag
+
+    def encrypt(
+        self,
+        plaintext: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None,
+        nonce: Optional[bytes] = None
+    ) -> bytes:
+        from src.crypto_research.mlmc_cipher import MLMCAEADExperimental
+        cipher = MLMCAEADExperimental(key)
+        return cipher.encrypt(plaintext, key, associated_data, nonce)
+
+    def decrypt(
+        self,
+        envelope: bytes,
+        key: bytes,
+        associated_data: Optional[bytes] = None
+    ) -> bytes:
+        from src.crypto_research.mlmc_cipher import MLMCAEADExperimental
+        cipher = MLMCAEADExperimental(key)
+        try:
+            return cipher.decrypt(envelope, key, associated_data)
+        except ValueError as exc:
+            raise DecryptionTamperedError(
+                f"MLMC-128 integrity verification failed: Tag mismatch or corrupted ciphertext."
+            ) from exc
+
+
 # Cipher Registry
 CIPHER_REGISTRY: Dict[str, AEADCipher] = {
     "AES-256-GCM": AES256GCMCipher(),
     "AES-128-GCM": AES128GCMCipher(),
     "ASCON-128": Ascon128Cipher(),
-    "ASCON-AEAD128": Ascon128Cipher()
+    "ASCON-AEAD128": Ascon128Cipher(),
+    "MLMC-128": MLMC128Cipher(),
+    "MLMC-AEAD128": MLMC128Cipher()
 }
 
 
