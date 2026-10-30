@@ -1,0 +1,5 @@
+regime,loss_mode,test_accuracy,test_precision,test_recall,test_specificity,test_f1,test_roc_auc,test_roi_dice,test_roi_iou,test_roi_alignment,pointing_game_acc,training_time_s
+Regime A (Classification-Only),cls_only,0.6897,0.6897,1.0,0.0,0.8163,0.6611,0.4764,0.3571,0.4921,0.6552,27.0493
+Regime B (Combined Loss),combined,0.6897,0.6897,1.0,0.0,0.8163,0.6667,0.6856,0.5395,0.8032,0.931,28.0252
+Regime C (Alignment-Only),align_only,0.6897,0.6897,1.0,0.0,0.8163,0.6167,0.5799,0.4243,0.8222,0.9655,27.2406
+Regime D (Dice-Only),dice_only,0.7586,0.7407,1.0,0.2222,0.8511,0.5167,0.7107,0.5704,0.6936,0.8276,26.8791

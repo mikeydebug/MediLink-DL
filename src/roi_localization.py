@@ -216,3 +216,52 @@ def build_demonstration_cxr_model() -> Tuple[nn.Module, nn.Module, Dict[str, Any
         "disclaimer": "Prototype neural network for Grad-CAM algorithmic testing only."
     }
     return model, target_layer, meta
+
+
+def load_trained_cxr_model(
+    checkpoint_path: Optional[str] = None
+) -> Tuple[nn.Module, nn.Module, Dict[str, Any]]:
+    """
+    Loads a trained CXR model checkpoint (either MedicalResNet18 or SimpleCXRClassifier).
+    Falls back gracefully to demonstration model if checkpoint is not found.
+    """
+    candidate_paths = []
+    if checkpoint_path is not None:
+        candidate_paths.append(Path(checkpoint_path))
+    candidate_paths.extend([
+        Path("results/real_cxr_localization_model.pt"),
+        Path("results/best_localization_model.pt"),
+        Path("results/real_cxr_classifier.pt")
+    ])
+    
+    for p in candidate_paths:
+        if p.exists():
+            try:
+                state = torch.load(p, map_location="cpu")
+                if any(k.startswith("backbone.") for k in state.keys()):
+                    # MedicalResNet18
+                    from src.train_real_models import MedicalResNet18
+                    model = MedicalResNet18(num_classes=2, pretrained=False)
+                    model.load_state_dict(state)
+                    model.eval()
+                    target_layer = model.target_layer
+                    meta = {
+                        "architecture": "MedicalResNet18 (Trained on real COVID-19 CXRs)",
+                        "target_layer": "backbone.layer4[-1]",
+                        "classes": ["Other Pneumonia / Control", "COVID-19 / Severe Viral"],
+                        "checkpoint": str(p),
+                        "is_medically_certified": False
+                    }
+                    return model, target_layer, meta
+                else:
+                    # SimpleCXRClassifier
+                    model, target_layer, meta = build_demonstration_cxr_model()
+                    model.load_state_dict(state)
+                    model.eval()
+                    meta["checkpoint"] = str(p)
+                    return model, target_layer, meta
+            except Exception as e:
+                continue
+                
+    return build_demonstration_cxr_model()
+

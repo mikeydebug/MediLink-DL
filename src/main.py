@@ -52,13 +52,17 @@ from src.transmission import (
 import torch
 from src.roi_localization import (
     build_demonstration_cxr_model,
+    load_trained_cxr_model,
     generate_roi_mask_from_heatmap,
     create_cam_overlay
 )
 from src.localization_loss import DifferentiableGradCAM
 from src.train_localization import run_localization_experiments
+from src.train_real_models import run_all_real_data_experiments
+from src.dataset_real import download_real_cxr_dataset, validate_dataset_pipeline
 from src.benchmark_crypto import run_crypto_benchmarks
 from src.optimization import run_cross_layer_optimization
+
 
 
 def generate_comparison_plot(
@@ -160,29 +164,40 @@ def run_demonstration(
         synthetic_mask = create_rectangular_roi_mask((h, w), (h // 2, w // 4, int(h * 0.8), int(w * 0.75)))
         print(f"      Image loaded successfully: {h}x{w} (8-bit grayscale).")
     else:
-        print("\n[1/7] Generating synthetic chest X-ray phantom (reproducible test input)...")
-        image, synthetic_mask, meta = generate_synthetic_cxr_phantom(
-            width=512, height=512, seed=42, add_lesion=True
-        )
-        print("      [NOTE] Generated synthetic phantom with simulated focal lesion.")
-        print(f"      [NOTE] Disclaimer stamped on image: '{meta['disclaimer']}'")
+        # Check if genuine medical radiographs are available locally
+        real_img_candidates = list(Path("data/real_cxr/images").glob("*.jpeg")) + list(Path("data/real_cxr/images").glob("*.jpg"))
+        if real_img_candidates and roi_method == "gradcam":
+            selected_real = sorted(real_img_candidates)[0]
+            print(f"\n[1/7] Loading genuine clinical chest radiograph: {selected_real.name}")
+            image = load_grayscale_image(str(selected_real), target_size=(512, 512))
+            h, w = image.shape
+            synthetic_mask = create_rectangular_roi_mask((h, w), (h // 2, w // 4, int(h * 0.8), int(w * 0.75)))
+            print(f"      Real medical radiograph loaded: {h}x{w} (8-bit grayscale).")
+        else:
+            print("\n[1/7] Generating synthetic chest X-ray phantom (reproducible test input)...")
+            image, synthetic_mask, meta_synth = generate_synthetic_cxr_phantom(
+                width=512, height=512, seed=42, add_lesion=True
+            )
+            print("      [NOTE] Generated synthetic phantom with simulated focal lesion.")
+            print(f"      [NOTE] Disclaimer stamped on image: '{meta_synth['disclaimer']}'")
 
     # Determine ROI Mask: Synthetic Ground Truth vs Deep Learning Grad-CAM
     if roi_method == "gradcam":
         print("      [DL-INFERENCE] Running Deep Learning model inference and Grad-CAM saliency localization...")
-        model, target_layer, meta = build_demonstration_cxr_model()
-        weights_path = results_dir / "best_localization_model.pt"
-        if weights_path.exists():
-            try:
-                model.load_state_dict(torch.load(weights_path, map_location="cpu"))
-                print(f"      [DL-MODEL] Loaded trained localization-aware weights from {weights_path.name}")
-            except Exception as e:
-                print(f"      [DL-MODEL] Using demonstration weights ({e})")
-        else:
-            print("      [DL-MODEL] Using baseline demonstration model weights.")
+        model, target_layer, meta = load_trained_cxr_model()
+        print(f"      [DL-MODEL] Loaded architecture: {meta['architecture']}")
+        if "checkpoint" in meta:
+            print(f"      [DL-MODEL] Active checkpoint:   {meta['checkpoint']}")
+            
         model.eval()
         gradcam = DifferentiableGradCAM(model, target_layer)
-        img_tensor = torch.from_numpy(image).float().unsqueeze(0).unsqueeze(0) / 255.0
+        
+        raw_norm = torch.from_numpy(image).float().unsqueeze(0).unsqueeze(0) / 255.0
+        if meta.get("architecture", "").startswith("MedicalResNet18"):
+            img_tensor = (raw_norm - 0.485) / 0.229
+        else:
+            img_tensor = raw_norm
+            
         with torch.enable_grad():
             logits, heatmaps = gradcam.compute_heatmap(img_tensor, target_classes=torch.tensor([1]), create_graph=False)
         gradcam.remove_hook()
@@ -200,6 +215,7 @@ def run_demonstration(
     else:
         print("      [ROI-BASELINE] Using synthetic ground-truth reference mask.")
         mask = synthetic_mask
+
         
     save_image(image, results_dir / "input_image.png")
     save_image(mask, results_dir / "roi_mask.png")
@@ -615,6 +631,9 @@ def main() -> None:
             "experiment-transmission",
             "experiment-security",
             "train-localization",
+            "train-real-models",
+            "prepare-dataset",
+            "validate-dataset",
             "benchmark-crypto",
             "optimize"
         ],
@@ -625,7 +644,7 @@ def main() -> None:
         "--image",
         type=str,
         default=None,
-        help="Path to custom 8-bit grayscale chest X-ray image (default: generate synthetic phantom)."
+        help="Path to custom 8-bit grayscale chest X-ray image (default: generate synthetic phantom or pick real CXR)."
     )
     parser.add_argument(
         "--output-dir",
@@ -677,6 +696,24 @@ def main() -> None:
             gradcam_threshold=args.gradcam_threshold
         )
         sys.exit(ret)
+    elif args.mode == "prepare-dataset":
+        print("Downloading and preparing COVID-19 Chest X-ray dataset...")
+        stats = download_real_cxr_dataset(target_dir="data/real_cxr")
+        print("Dataset preparation complete:")
+        for k, v in stats.items():
+            print(f"  {k}: {v}")
+        sys.exit(0)
+    elif args.mode == "validate-dataset":
+        print("Validating clinical CXR dataset pipeline & patient isolation...")
+        val_res = validate_dataset_pipeline("data/real_cxr")
+        print("Validation report:")
+        for k, v in val_res.items():
+            print(f"  {k}: {v}")
+        sys.exit(0 if val_res["valid"] else 1)
+    elif args.mode == "train-real-models":
+        print("Executing ResNet-18 training across 4 regimes on real CXRs...")
+        run_all_real_data_experiments(data_dir="data/real_cxr", results_dir=args.output_dir)
+        sys.exit(0)
     elif args.mode == "experiment-compression":
         ret = run_experiment_compression(output_dir=args.output_dir)
         sys.exit(ret)
@@ -695,6 +732,7 @@ def main() -> None:
     elif args.mode == "optimize":
         run_cross_layer_optimization(output_dir=args.output_dir)
         sys.exit(0)
+
 
 
 if __name__ == "__main__":

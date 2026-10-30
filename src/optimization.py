@@ -88,31 +88,54 @@ def run_cross_layer_optimization(
     print(" MediLink-DL: Cross-Layer Multi-Objective Optimization (DL x DIP x CN x Crypto)")
     print("=" * 80)
     
-    # Generate canonical test radiograph
-    image, gt_mask, _ = generate_synthetic_cxr_phantom(width=256, height=256, seed=seed)
+    # Load genuine medical radiograph if available, otherwise synthetic phantom
+    from src.image_utils import load_grayscale_image
+    from src.roi_localization import load_trained_cxr_model
+    real_imgs = list(Path("data/real_cxr/images").glob("*.jpeg")) + list(Path("data/real_cxr/images").glob("*.jpg"))
+    if real_imgs:
+        real_sample_path = sorted(real_imgs)[0]
+        print(f"[OPT] Loading real medical radiograph: {real_sample_path.name}")
+        image = load_grayscale_image(str(real_sample_path), target_size=(256, 256))
+        gt_mask = None
+    else:
+        print("[OPT] Generating synthetic chest X-ray phantom...")
+        image, gt_mask, _ = generate_synthetic_cxr_phantom(width=256, height=256, seed=seed)
     
     # Load trained localization model for Grad-CAM ROI extraction
-    model, target_layer, _ = build_demonstration_cxr_model()
-    weights_path = out_path / "best_localization_model.pt"
-    if weights_path.exists():
-        model.load_state_dict(torch.load(weights_path, map_location="cpu"))
-        print(f"[OPT] Loaded trained localization weights from {weights_path.name}")
+    model, target_layer, meta = load_trained_cxr_model()
+    print(f"[OPT] Loaded localization model: {meta['architecture']}")
     model.eval()
     
     gradcam = DifferentiableGradCAM(model, target_layer)
-    img_t = torch.from_numpy(image).float().unsqueeze(0).unsqueeze(0) / 255.0
+    raw_norm = torch.from_numpy(image).float().unsqueeze(0).unsqueeze(0) / 255.0
+    if meta.get("architecture", "").startswith("MedicalResNet18"):
+        img_t = (raw_norm - 0.485) / 0.229
+    else:
+        img_t = raw_norm
+        
     with torch.enable_grad():
         _, heatmaps = gradcam.compute_heatmap(img_t, target_classes=torch.tensor([1]), create_graph=False)
     gradcam.remove_hook()
     
     gc_heatmap = heatmaps.squeeze().detach().cpu().numpy()
     gradcam_mask = generate_roi_mask_from_heatmap(gc_heatmap, threshold=0.45)
-    
+    if np.sum(gradcam_mask > 0) == 0:
+        gradcam_mask = generate_roi_mask_from_heatmap(gc_heatmap, threshold=0.25)
+        
     # Decision Variable Spaces
-    roi_methods = [
-        ("synthetic", gt_mask),
-        ("gradcam", gradcam_mask)
-    ]
+    if gt_mask is not None:
+        roi_methods = [
+            ("synthetic", gt_mask),
+            ("gradcam", gradcam_mask)
+        ]
+    else:
+        # Dual thresholds for Grad-CAM on real medical image
+        gradcam_mask_relaxed = generate_roi_mask_from_heatmap(gc_heatmap, threshold=0.35)
+        roi_methods = [
+            ("gradcam-0.45", gradcam_mask),
+            ("gradcam-0.35", gradcam_mask_relaxed)
+        ]
+
     compression_configs = [
         ("ROI-Aware-High", 90, 25),
         ("ROI-Aware-Medium", 85, 20),
