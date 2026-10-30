@@ -635,10 +635,13 @@ def main() -> None:
             "prepare-dataset",
             "validate-dataset",
             "benchmark-crypto",
-            "optimize"
+            "optimize",
+            "dashboard",
+            "ui"
         ],
         default="demo",
         help="Execution mode (default: demo)."
+
     )
     parser.add_argument(
         "--image",
@@ -732,6 +735,11 @@ def main() -> None:
     elif args.mode == "optimize":
         run_cross_layer_optimization(output_dir=args.output_dir)
         sys.exit(0)
+    elif args.mode in ("dashboard", "ui"):
+        from src.web_app import start_server
+        start_server(port=8080)
+        sys.exit(0)
+
 
 
 

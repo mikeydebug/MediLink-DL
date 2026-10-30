@@ -282,9 +282,13 @@ def generate_secure_key(bit_length: int = 256, algorithm: Optional[str] = None) 
     if algorithm is not None:
         cipher = get_aead_cipher(algorithm)
         return cipher.generate_key()
+
+    # Gracefully accept byte-lengths (16, 24, 32) as well as bit-lengths (128, 192, 256)
+    if bit_length in (16, 24, 32):
+        bit_length *= 8
         
     if bit_length not in (128, 192, 256):
-        raise ValueError(f"Unsupported key length {bit_length}. Must be 128, 192, or 256.")
+        raise ValueError(f"Unsupported key length {bit_length}. Must be 128, 192, or 256 bits (or 16, 24, 32 bytes).")
     return os.urandom(bit_length // 8)
 
 

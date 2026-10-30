@@ -1,0 +1,252 @@
+[
+  {
+    "algorithm": "AES-256-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 256,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.25,
+    "dec_time_us": 1.5,
+    "throughput_mb_s": 65.1
+  },
+  {
+    "algorithm": "AES-128-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 256,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.21,
+    "dec_time_us": 1.5,
+    "throughput_mb_s": 65.82
+  },
+  {
+    "algorithm": "ASCON-128",
+    "type": "Standardized AEAD",
+    "implementation": "Pure Python Reference",
+    "payload_bytes": 256,
+    "overhead_bytes": 32,
+    "enc_time_us": 414.73,
+    "dec_time_us": 413.0,
+    "throughput_mb_s": 0.29
+  },
+  {
+    "algorithm": "MLMC-128 (Raw Block)",
+    "type": "Experimental Block Cipher",
+    "implementation": "Pure Python SPN Prototype",
+    "payload_bytes": 256,
+    "overhead_bytes": 0,
+    "enc_time_us": 1686.75,
+    "dec_time_us": 1678.23,
+    "throughput_mb_s": 0.07
+  },
+  {
+    "algorithm": "MLMC-GCM-Exp",
+    "type": "Experimental AEAD Candidate",
+    "implementation": "Pure Python SPN + GHASH",
+    "payload_bytes": 256,
+    "overhead_bytes": 28,
+    "enc_time_us": 2089.52,
+    "dec_time_us": 2078.67,
+    "throughput_mb_s": 0.06
+  },
+  {
+    "algorithm": "AES-256-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 512,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.29,
+    "dec_time_us": 1.54,
+    "throughput_mb_s": 127.36
+  },
+  {
+    "algorithm": "AES-128-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 512,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.08,
+    "dec_time_us": 1.38,
+    "throughput_mb_s": 141.2
+  },
+  {
+    "algorithm": "ASCON-128",
+    "type": "Standardized AEAD",
+    "implementation": "Pure Python Reference",
+    "payload_bytes": 512,
+    "overhead_bytes": 32,
+    "enc_time_us": 709.25,
+    "dec_time_us": 708.9,
+    "throughput_mb_s": 0.34
+  },
+  {
+    "algorithm": "MLMC-128 (Raw Block)",
+    "type": "Experimental Block Cipher",
+    "implementation": "Pure Python SPN Prototype",
+    "payload_bytes": 512,
+    "overhead_bytes": 0,
+    "enc_time_us": 3358.04,
+    "dec_time_us": 3348.71,
+    "throughput_mb_s": 0.07
+  },
+  {
+    "algorithm": "MLMC-GCM-Exp",
+    "type": "Experimental AEAD Candidate",
+    "implementation": "Pure Python SPN + GHASH",
+    "payload_bytes": 512,
+    "overhead_bytes": 28,
+    "enc_time_us": 4036.88,
+    "dec_time_us": 4025.56,
+    "throughput_mb_s": 0.06
+  },
+  {
+    "algorithm": "AES-256-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 1024,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.33,
+    "dec_time_us": 1.62,
+    "throughput_mb_s": 246.67
+  },
+  {
+    "algorithm": "AES-128-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 1024,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.25,
+    "dec_time_us": 1.54,
+    "throughput_mb_s": 257.53
+  },
+  {
+    "algorithm": "ASCON-128",
+    "type": "Standardized AEAD",
+    "implementation": "Pure Python Reference",
+    "payload_bytes": 1024,
+    "overhead_bytes": 32,
+    "enc_time_us": 1337.65,
+    "dec_time_us": 1336.31,
+    "throughput_mb_s": 0.37
+  },
+  {
+    "algorithm": "MLMC-128 (Raw Block)",
+    "type": "Experimental Block Cipher",
+    "implementation": "Pure Python SPN Prototype",
+    "payload_bytes": 1024,
+    "overhead_bytes": 0,
+    "enc_time_us": 6720.35,
+    "dec_time_us": 6688.81,
+    "throughput_mb_s": 0.07
+  },
+  {
+    "algorithm": "MLMC-GCM-Exp",
+    "type": "Experimental AEAD Candidate",
+    "implementation": "Pure Python SPN + GHASH",
+    "payload_bytes": 1024,
+    "overhead_bytes": 28,
+    "enc_time_us": 7889.35,
+    "dec_time_us": 7862.98,
+    "throughput_mb_s": 0.06
+  },
+  {
+    "algorithm": "AES-256-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 2048,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.54,
+    "dec_time_us": 1.79,
+    "throughput_mb_s": 450.65
+  },
+  {
+    "algorithm": "AES-128-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 2048,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.46,
+    "dec_time_us": 1.71,
+    "throughput_mb_s": 468.71
+  },
+  {
+    "algorithm": "ASCON-128",
+    "type": "Standardized AEAD",
+    "implementation": "Pure Python Reference",
+    "payload_bytes": 2048,
+    "overhead_bytes": 32,
+    "enc_time_us": 2608.54,
+    "dec_time_us": 2603.04,
+    "throughput_mb_s": 0.37
+  },
+  {
+    "algorithm": "MLMC-128 (Raw Block)",
+    "type": "Experimental Block Cipher",
+    "implementation": "Pure Python SPN Prototype",
+    "payload_bytes": 2048,
+    "overhead_bytes": 0,
+    "enc_time_us": 13373.0,
+    "dec_time_us": 13341.19,
+    "throughput_mb_s": 0.07
+  },
+  {
+    "algorithm": "MLMC-GCM-Exp",
+    "type": "Experimental AEAD Candidate",
+    "implementation": "Pure Python SPN + GHASH",
+    "payload_bytes": 2048,
+    "overhead_bytes": 28,
+    "enc_time_us": 15564.29,
+    "dec_time_us": 15512.38,
+    "throughput_mb_s": 0.06
+  },
+  {
+    "algorithm": "AES-256-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 4096,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.83,
+    "dec_time_us": 2.04,
+    "throughput_mb_s": 801.12
+  },
+  {
+    "algorithm": "AES-128-GCM",
+    "type": "Standardized AEAD",
+    "implementation": "OpenSSL C / Hardware Accelerated",
+    "payload_bytes": 4096,
+    "overhead_bytes": 28,
+    "enc_time_us": 2.71,
+    "dec_time_us": 1.96,
+    "throughput_mb_s": 837.17
+  },
+  {
+    "algorithm": "ASCON-128",
+    "type": "Standardized AEAD",
+    "implementation": "Pure Python Reference",
+    "payload_bytes": 4096,
+    "overhead_bytes": 32,
+    "enc_time_us": 5150.0,
+    "dec_time_us": 5143.44,
+    "throughput_mb_s": 0.38
+  },
+  {
+    "algorithm": "MLMC-128 (Raw Block)",
+    "type": "Experimental Block Cipher",
+    "implementation": "Pure Python SPN Prototype",
+    "payload_bytes": 4096,
+    "overhead_bytes": 0,
+    "enc_time_us": 26838.77,
+    "dec_time_us": 26745.81,
+    "throughput_mb_s": 0.07
+  },
+  {
+    "algorithm": "MLMC-GCM-Exp",
+    "type": "Experimental AEAD Candidate",
+    "implementation": "Pure Python SPN + GHASH",
+    "payload_bytes": 4096,
+    "overhead_bytes": 28,
+    "enc_time_us": 31165.27,
+    "dec_time_us": 30990.75,
+    "throughput_mb_s": 0.06
+  }
+]

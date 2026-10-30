@@ -1,0 +1,90 @@
+{
+  "candidate": "MediLink Mini Cipher (MLMC-128)",
+  "timestamp": "2026-10-29T16:13:02Z",
+  "avalanche": {
+    "num_trials": 4800,
+    "mean_bit_flip_pct": 49.92,
+    "std_bit_flip_pct": 4.45,
+    "min_bit_flip_pct": 33.59,
+    "max_bit_flip_pct": 66.41,
+    "sac_deviation_from_ideal": 0.08,
+    "ideal_expected_pct": 50.0
+  },
+  "round_progression": [
+    {
+      "round": 1,
+      "mean_flip_pct": 3.14,
+      "std_flip_pct": 1.0
+    },
+    {
+      "round": 2,
+      "mean_flip_pct": 12.16,
+      "std_flip_pct": 2.24
+    },
+    {
+      "round": 3,
+      "mean_flip_pct": 50.05,
+      "std_flip_pct": 3.82
+    },
+    {
+      "round": 4,
+      "mean_flip_pct": 49.88,
+      "std_flip_pct": 4.47
+    },
+    {
+      "round": 5,
+      "mean_flip_pct": 50.49,
+      "std_flip_pct": 4.06
+    },
+    {
+      "round": 6,
+      "mean_flip_pct": 49.48,
+      "std_flip_pct": 3.91
+    },
+    {
+      "round": 7,
+      "mean_flip_pct": 49.36,
+      "std_flip_pct": 3.72
+    },
+    {
+      "round": 8,
+      "mean_flip_pct": 50.24,
+      "std_flip_pct": 4.55
+    },
+    {
+      "round": 9,
+      "mean_flip_pct": 50.04,
+      "std_flip_pct": 4.12
+    },
+    {
+      "round": 10,
+      "mean_flip_pct": 49.79,
+      "std_flip_pct": 4.13
+    }
+  ],
+  "sbox_cryptanalysis": {
+    "max_ddt_count": 4,
+    "max_differential_probability": 0.015625,
+    "max_lat_bias_count": 16,
+    "max_linear_bias": 0.0625
+  },
+  "randomness_tests": {
+    "total_stream_bytes": 4800,
+    "monobit": {
+      "ones_ratio": 0.5002,
+      "s_obs": 0.0816,
+      "p_value": 0.9349,
+      "passed": true
+    },
+    "chi_square": {
+      "statistic": 258.99,
+      "degrees_of_freedom": 255,
+      "passed": true
+    },
+    "runs": {
+      "total_runs": 19303,
+      "p_value": 0.2931,
+      "passed": true
+    }
+  }
+}

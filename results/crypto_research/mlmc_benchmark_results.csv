@@ -1,0 +1,26 @@
+algorithm,type,implementation,payload_bytes,overhead_bytes,enc_time_us,dec_time_us,throughput_mb_s
+AES-256-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,256,28,2.25,1.5,65.1
+AES-128-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,256,28,2.21,1.5,65.82
+ASCON-128,Standardized AEAD,Pure Python Reference,256,32,414.73,413.0,0.29
+MLMC-128 (Raw Block),Experimental Block Cipher,Pure Python SPN Prototype,256,0,1686.75,1678.23,0.07
+MLMC-GCM-Exp,Experimental AEAD Candidate,Pure Python SPN + GHASH,256,28,2089.52,2078.67,0.06
+AES-256-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,512,28,2.29,1.54,127.36
+AES-128-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,512,28,2.08,1.38,141.2
+ASCON-128,Standardized AEAD,Pure Python Reference,512,32,709.25,708.9,0.34
+MLMC-128 (Raw Block),Experimental Block Cipher,Pure Python SPN Prototype,512,0,3358.04,3348.71,0.07
+MLMC-GCM-Exp,Experimental AEAD Candidate,Pure Python SPN + GHASH,512,28,4036.88,4025.56,0.06
+AES-256-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,1024,28,2.33,1.62,246.67
+AES-128-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,1024,28,2.25,1.54,257.53
+ASCON-128,Standardized AEAD,Pure Python Reference,1024,32,1337.65,1336.31,0.37
+MLMC-128 (Raw Block),Experimental Block Cipher,Pure Python SPN Prototype,1024,0,6720.35,6688.81,0.07
+MLMC-GCM-Exp,Experimental AEAD Candidate,Pure Python SPN + GHASH,1024,28,7889.35,7862.98,0.06
+AES-256-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,2048,28,2.54,1.79,450.65
+AES-128-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,2048,28,2.46,1.71,468.71
+ASCON-128,Standardized AEAD,Pure Python Reference,2048,32,2608.54,2603.04,0.37
+MLMC-128 (Raw Block),Experimental Block Cipher,Pure Python SPN Prototype,2048,0,13373.0,13341.19,0.07
+MLMC-GCM-Exp,Experimental AEAD Candidate,Pure Python SPN + GHASH,2048,28,15564.29,15512.38,0.06
+AES-256-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,4096,28,2.83,2.04,801.12
+AES-128-GCM,Standardized AEAD,OpenSSL C / Hardware Accelerated,4096,28,2.71,1.96,837.17
+ASCON-128,Standardized AEAD,Pure Python Reference,4096,32,5150.0,5143.44,0.38
+MLMC-128 (Raw Block),Experimental Block Cipher,Pure Python SPN Prototype,4096,0,26838.77,26745.81,0.07
+MLMC-GCM-Exp,Experimental AEAD Candidate,Pure Python SPN + GHASH,4096,28,31165.27,30990.75,0.06
