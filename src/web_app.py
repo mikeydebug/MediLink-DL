@@ -1942,8 +1942,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
 
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
+
 def start_server(port: int = 8080):
-    server = HTTPServer(("127.0.0.1", port), DashboardHandler)
+    server = ReusableHTTPServer(("127.0.0.1", port), DashboardHandler)
     print(f"\n" + "=" * 75)
     print(f" MediLink-DL Clinical Telemedicine Dashboard running at: http://localhost:{port}")
     print(f" Interactive Research Console Ready for Viva Presentation.")
@@ -1957,4 +1961,6 @@ def start_server(port: int = 8080):
 
 
 if __name__ == "__main__":
-    start_server(port=8080)
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 8080
+    start_server(port=port)
