@@ -107,6 +107,16 @@ def save_image(image: np.ndarray, output_path: str | Path) -> Path:
     return out.resolve()
 
 
+# ==============================================================================
+# [HISTORICAL / UNIT TEST FIXTURE ONLY - DEPRECATED FOR CLINICAL EVALUATION]
+# NOTE: In earlier prototype phases, this synthetic phantom generator was used
+# before the real Cohen et al. COVID-19 / Pneumonia CXR dataset was integrated.
+# In the finalized system, production and clinical evaluations strictly use REAL CXRs
+# loaded from `data/real_cxr/` and trained via `src/train_real_models.py`.
+# This function is retained EXCLUSIVELY as a lightweight, deterministic offline fixture
+# for fast unit testing (e.g. in `tests/test_image_utils.py` and `tests/test_transmission.py`)
+# without requiring external dataset downloads on new developer machines.
+# ==============================================================================
 def generate_synthetic_cxr_phantom(
     width: int = 512,
     height: int = 512,
