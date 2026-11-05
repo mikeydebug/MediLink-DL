@@ -107,7 +107,8 @@ def train_single_regime(
         lambda_loc=lambda_loc,
         beta_dice=beta_dice
     )
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    trainable_params = list(model.parameters()) + list(criterion.parameters())
+    optimizer = optim.Adam(trainable_params, lr=lr, weight_decay=1e-4)
     
     start_time = time.time()
     train_losses = []

@@ -122,6 +122,10 @@ Standard classification networks are optimized exclusively against categorical c
      $$L_{\text{dice}} = 1.0 - \frac{2 \sum_{i,j} (H_{i,j} \cdot M_{i,j}) + \epsilon}{\sum_{i,j} H_{i,j} + \sum_{i,j} M_{i,j} + \epsilon}$$
    - **Composite Objective**:
      $$L_{\text{total}} = L_{\text{cls}} + \lambda_{\text{loc}} (L_{\text{align}} + \beta L_{\text{dice}})$$
+   - **Automated Homoscedastic Uncertainty Optimization**:
+     To eliminate manual heuristic tuning of $\lambda_{\text{loc}}$ and $\beta$, we formulate multi-task loss balancing via learnable task log-variances $s_i = \log(\sigma_i^2)$ (Kendall & Gal, CVPR 2018):
+     $$L_{\text{adaptive}} = \frac{1}{2} \sum_{i \in \{\text{cls}, \text{align}, \text{dice}\}} \left( \exp(-s_i) \cdot L_i + s_i \right)$$
+     where $s_i$ are optimized jointly with network weights via AdamW, dynamically yielding effective penalty ratios $\lambda_{\text{loc}}^{\text{eff}} = \exp(s_{\text{cls}} - s_{\text{align}})$ and $\beta^{\text{eff}} = \exp(s_{\text{align}} - s_{\text{dice}})$.
 
 ---
 

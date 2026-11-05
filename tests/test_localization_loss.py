@@ -11,6 +11,7 @@ from src.localization_loss import (
     alignment_loss,
     dice_loss,
     LocalizationAwareLoss,
+    AdaptiveLocalizationAwareLoss,
     evaluate_saliency_metrics
 )
 
@@ -140,3 +141,75 @@ def test_evaluate_saliency_metrics():
     assert metrics_miss["dice"] < 0.05
     assert metrics_miss["pointing_game_hit"] == 0.0
     assert metrics_miss["energy_inside_roi"] < 0.05
+
+
+def test_adaptive_uncertainty_loss_optimization():
+    """Verify that mode='adaptive' dynamically optimizes log_var uncertainty parameters."""
+    model, target_layer, _ = build_demonstration_cxr_model()
+    model.train()
+    
+    gradcam = DifferentiableGradCAM(model, target_layer)
+    criterion = LocalizationAwareLoss(mode="adaptive")
+    
+    # Optimizer updates both neural weights AND loss uncertainty parameters
+    optimizer = torch.optim.Adam(
+        list(model.parameters()) + list(criterion.parameters()),
+        lr=0.05
+    )
+    
+    x = torch.randn(2, 1, 64, 64)
+    targets = torch.tensor([1, 1])
+    masks = torch.zeros(2, 1, 64, 64)
+    masks[:, :, 20:40, 20:40] = 1.0
+    
+    initial_log_var_cls = criterion.log_var_cls.item()
+    initial_log_var_align = criterion.log_var_align.item()
+    initial_log_var_dice = criterion.log_var_dice.item()
+    
+    assert initial_log_var_cls == 0.0
+    assert initial_log_var_align == 0.0
+    assert initial_log_var_dice == 0.0
+    
+    optimizer.zero_grad()
+    logits, heatmaps = gradcam.compute_heatmap(x, targets, create_graph=True)
+    loss_dict = criterion(logits, targets, heatmaps, masks)
+    
+    assert "loss_total" in loss_dict
+    assert "effective_lambda" in loss_dict
+    assert "effective_beta" in loss_dict
+    
+    loss_dict["loss_total"].backward()
+    
+    # Check that uncertainty parameters have received non-zero gradients
+    assert criterion.log_var_cls.grad is not None
+    assert criterion.log_var_align.grad is not None
+    assert criterion.log_var_dice.grad is not None
+    
+    optimizer.step()
+    
+    # Verify that at least one uncertainty parameter was adjusted by the optimizer
+    weights = criterion.get_effective_weights()
+    assert "w_cls" in weights
+    assert "w_align" in weights
+    assert "w_dice" in weights
+    assert "effective_lambda_loc" in weights
+    assert "effective_beta_dice" in weights
+    
+    params_changed = (
+        criterion.log_var_cls.item() != initial_log_var_cls or
+        criterion.log_var_align.item() != initial_log_var_align or
+        criterion.log_var_dice.item() != initial_log_var_dice
+    )
+    assert params_changed is True
+    
+    gradcam.remove_hook()
+
+
+def test_adaptive_localization_aware_loss_subclass():
+    """Verify AdaptiveLocalizationAwareLoss convenience wrapper subclass."""
+    criterion = AdaptiveLocalizationAwareLoss()
+    assert criterion.mode == "adaptive"
+    assert hasattr(criterion, "log_var_cls")
+    assert hasattr(criterion, "log_var_align")
+    assert hasattr(criterion, "log_var_dice")
+

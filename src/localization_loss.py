@@ -204,13 +204,16 @@ class LocalizationAwareLoss(nn.Module):
         """Initialize composite loss.
         
         Args:
-            mode: One of 'cls_only', 'align_only', 'dice_only', 'combined'.
-            lambda_loc: Scaling factor for localization penalty.
-            beta_dice: Weight of Dice penalty relative to alignment penalty.
+            mode: One of 'cls_only', 'align_only', 'dice_only', 'combined', 'adaptive'.
+                  'adaptive' uses Kendall & Gal (CVPR 2018) Homoscedastic Uncertainty Weighting,
+                  where optimal task penalties (lambda_loc, beta_dice) are learned automatically
+                  via gradient descent, removing the need for manual hyperparameter guessing.
+            lambda_loc: Scaling factor for localization penalty (used in fixed modes).
+            beta_dice: Weight of Dice penalty relative to alignment penalty (used in fixed modes).
             eps: Numerical stabilization constant.
         """
         super().__init__()
-        valid_modes = ("cls_only", "align_only", "dice_only", "combined")
+        valid_modes = ("cls_only", "align_only", "dice_only", "combined", "adaptive")
         if mode not in valid_modes:
             raise ValueError(f"Invalid mode '{mode}'. Must be one of {valid_modes}")
             
@@ -219,6 +222,13 @@ class LocalizationAwareLoss(nn.Module):
         self.beta_dice = float(beta_dice)
         self.eps = float(eps)
         self.ce_loss = nn.CrossEntropyLoss()
+        
+        # Homoscedastic Uncertainty Parameters (Kendall & Gal, CVPR 2018)
+        # s_i = log(sigma_i^2). Initial s = 0.0 => sigma = 1.0 => exp(-s) = 1.0 (equal initial weight).
+        # When mode == 'adaptive', these parameters are updated automatically during backpropagation.
+        self.log_var_cls = nn.Parameter(torch.zeros(1))
+        self.log_var_align = nn.Parameter(torch.zeros(1))
+        self.log_var_dice = nn.Parameter(torch.zeros(1))
         
     def forward(
         self,
@@ -236,12 +246,13 @@ class LocalizationAwareLoss(nn.Module):
             masks: (B, 1, H, W) reference ROI binary masks.
             
         Returns:
-            Dict containing 'loss_total', 'loss_cls', 'loss_loc', 'loss_align', 'loss_dice'.
+            Dict containing 'loss_total', 'loss_cls', 'loss_loc', 'loss_align', 'loss_dice',
+            and when in adaptive mode: 'effective_lambda', 'effective_beta', and log-variance values.
         """
         l_cls = self.ce_loss(logits, targets)
         zero_tensor = torch.tensor(0.0, device=logits.device, dtype=logits.dtype)
         
-        if self.mode == "cls_only" or heatmaps is None or masks is None or self.lambda_loc <= 0.0:
+        if self.mode == "cls_only" or heatmaps is None or masks is None or (self.lambda_loc <= 0.0 and self.mode != "adaptive"):
             return {
                 "loss_total": l_cls,
                 "loss_cls": l_cls,
@@ -252,6 +263,36 @@ class LocalizationAwareLoss(nn.Module):
             
         l_align = alignment_loss(heatmaps, masks, eps=self.eps)
         l_dice = dice_loss(heatmaps, masks, eps=self.eps)
+        
+        if self.mode == "adaptive":
+            # Homoscedastic Uncertainty Weighting (Kendall et al., CVPR 2018)
+            # L_i_weighted = 0.5 * exp(-s_i) * L_i + 0.5 * s_i
+            loss_cls_term = 0.5 * torch.exp(-self.log_var_cls) * l_cls + 0.5 * self.log_var_cls
+            loss_align_term = 0.5 * torch.exp(-self.log_var_align) * l_align + 0.5 * self.log_var_align
+            loss_dice_term = 0.5 * torch.exp(-self.log_var_dice) * l_dice + 0.5 * self.log_var_dice
+            
+            l_total = loss_cls_term + loss_align_term + loss_dice_term
+            l_loc = l_align + l_dice
+            
+            # Derive effective dynamically learned penalty factors
+            w_cls = torch.exp(-self.log_var_cls).item()
+            w_align = torch.exp(-self.log_var_align).item()
+            w_dice = torch.exp(-self.log_var_dice).item()
+            effective_lambda = w_align / (w_cls + self.eps)
+            effective_beta = w_dice / (w_align + self.eps)
+            
+            return {
+                "loss_total": l_total,
+                "loss_cls": l_cls,
+                "loss_loc": l_loc,
+                "loss_align": l_align,
+                "loss_dice": l_dice,
+                "effective_lambda": effective_lambda,
+                "effective_beta": effective_beta,
+                "log_var_cls": self.log_var_cls.item(),
+                "log_var_align": self.log_var_align.item(),
+                "log_var_dice": self.log_var_dice.item()
+            }
         
         if self.mode == "align_only":
             l_loc = l_align
@@ -271,6 +312,33 @@ class LocalizationAwareLoss(nn.Module):
             "loss_align": l_align,
             "loss_dice": l_dice
         }
+
+    def get_effective_weights(self) -> Dict[str, float]:
+        """Return effective loss weights w_i = exp(-s_i) and derived lambda/beta factors."""
+        w_cls = float(torch.exp(-self.log_var_cls).item())
+        w_align = float(torch.exp(-self.log_var_align).item())
+        w_dice = float(torch.exp(-self.log_var_dice).item())
+        return {
+            "w_cls": w_cls,
+            "w_align": w_align,
+            "w_dice": w_dice,
+            "sigma_cls": float(torch.exp(0.5 * self.log_var_cls).item()),
+            "sigma_align": float(torch.exp(0.5 * self.log_var_align).item()),
+            "sigma_dice": float(torch.exp(0.5 * self.log_var_dice).item()),
+            "effective_lambda_loc": w_align / (w_cls + 1e-9),
+            "effective_beta_dice": w_dice / (w_align + 1e-9),
+        }
+
+
+class AdaptiveLocalizationAwareLoss(LocalizationAwareLoss):
+    """Convenience subclass for LocalizationAwareLoss(mode='adaptive').
+    
+    Implements Kendall & Gal (CVPR 2018) Multi-Task Homoscedastic Uncertainty Weighting.
+    Automatically optimizes task penalties (lambda_loc, beta_dice) during training
+    via second-order backpropagation, eliminating manual hyperparameter guesswork.
+    """
+    def __init__(self, eps: float = 1e-7):
+        super().__init__(mode="adaptive", eps=eps)
 
 
 def evaluate_saliency_metrics(

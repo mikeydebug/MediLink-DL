@@ -331,6 +331,11 @@ def build_dl_dip_pdf(output_path: Path):
             Paragraph("<b>Master Objective</b><br/>L<sub>total</sub>", table_cell_bold),
             Paragraph("<b>L<sub>total</sub> = L<sub>cls</sub> + λ<sub>loc</sub>·(L<sub>align</sub> + β·L<sub>dice</sub>)</b><br/>(λ<sub>loc</sub> = 1.0, β = 0.5)", table_cell_style),
             Paragraph("Because H preserves the autograd graph, calling <code>L<sub>total</sub>.backward()</code> propagates second-order gradients (∂²L / ∂W∂A) directly into the backbone weights.", table_cell_style)
+        ],
+        [
+            Paragraph("<b>Adaptive Uncertainty</b><br/>L<sub>adaptive</sub> (Kendall et al.)", table_cell_bold),
+            Paragraph("<b>L<sub>adaptive</sub> = 0.5·∑ [exp(-s<sub>i</sub>)·L<sub>i</sub> + s<sub>i</sub>]</b><br/>(s<sub>i</sub> = log σ<sub>i</sub>²)", table_cell_style),
+            Paragraph("Automated optimization: Learnable task log-variances dynamically balance penalty factors (λ<sub>loc</sub>, β) during training via gradient descent, eliminating manual heuristic guessing.", table_cell_style)
         ]
     ]
     t_loss = Table(loss_table_data, colWidths=[90, 180, 230])
@@ -536,7 +541,21 @@ def build_dl_dip_pdf(output_path: Path):
             Paragraph("<code>localization_loss.py</code>", table_cell_style),
             Paragraph("<code>mode='combined', lambda_loc=1.0, beta=0.5</code>", table_cell_style),
             Paragraph("<code>nn.Module</code>", table_cell_style),
-            Paragraph("Master loss module. Combines L<sub>cls</sub> + λ<sub>loc</sub>·(L<sub>align</sub> + β·L<sub>dice</sub>) to generate second-order backpropagation.", table_cell_style)
+            Paragraph("Master loss module supporting fixed scalarization and adaptive uncertainty balancing.", table_cell_style)
+        ],
+        [
+            Paragraph("<code>AdaptiveLocalizationAwareLoss</code>", table_cell_bold),
+            Paragraph("<code>localization_loss.py</code>", table_cell_style),
+            Paragraph("<code>eps=1e-7</code>", table_cell_style),
+            Paragraph("<code>nn.Module</code>", table_cell_style),
+            Paragraph("Homoscedastic uncertainty loss wrapper (Kendall et al., 2018). Learns optimal task penalties automatically.", table_cell_style)
+        ],
+        [
+            Paragraph("<code>get_effective_weights()</code>", table_cell_bold),
+            Paragraph("<code>localization_loss.py</code>", table_cell_style),
+            Paragraph("<code>None</code>", table_cell_style),
+            Paragraph("<code>dict</code>", table_cell_style),
+            Paragraph("Computes learned task weights w<sub>i</sub> = exp(-s<sub>i</sub>) and derived dynamic penalty factors λ<sub>loc</sub><sup>eff</sup> and β<sup>eff</sup>.", table_cell_style)
         ],
         [
             Paragraph("<code>generate_roi_mask_from_heatmap()</code>", table_cell_bold),
@@ -739,3 +758,4 @@ if __name__ == "__main__":
     out_dir.mkdir(parents=True, exist_ok=True)
     out_pdf = out_dir / "MediLink_DL_DIP_Technical_Report.pdf"
     build_dl_dip_pdf(out_pdf)
+

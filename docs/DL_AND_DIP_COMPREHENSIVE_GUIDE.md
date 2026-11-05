@@ -174,6 +174,20 @@ where $\lambda_{\text{loc}} = 1.0$ controls the overall localization penalty wei
 
 Because $\mathbf{H}$ is constructed differentiably (`create_graph=True`), executing `loss_total.backward()` propagates **second-order gradients** ($\frac{\partial^2 \mathcal{L}}{\partial \mathbf{W} \partial \mathbf{A}}$) directly through the Grad-CAM computation back into the convolutional weights of `MedicalResNet18`.
 
+#### 5. Automated Loss Balancing: Homoscedastic Uncertainty Weighting
+To eliminate manual heuristic guessing of $\lambda_{\text{loc}}$ and $\beta$, MediLink-DL integrates **Adaptive Homoscedastic Uncertainty Weighting** (Kendall et al., CVPR 2018; `mode="adaptive"` / `AdaptiveLocalizationAwareLoss`).
+
+Instead of static scalar weights, task variances $\sigma^2$ are parameterized as learnable log-variances $s_i = \log(\sigma_i^2)$ directly inside PyTorch's autograd computational graph (`nn.Parameter(torch.zeros(1))`):
+$$\mathcal{L}_{\text{adaptive}} = \frac{1}{2}\sum_{i \in \{\text{cls}, \text{align}, \text{dice}\}} \left( \exp(-s_i) \cdot \mathcal{L}_i + s_i \right)$$
+
+* **Automatic Optimization Mechanism:**
+  * Initial state: $s_i = 0 \implies \exp(-0) = 1.0$ (equal initial contribution).
+  * If the alignment loss is noisy or has large gradient magnitude, the optimizer increases $s_{\text{align}}$, reducing its effective weight $\exp(-s_{\text{align}})$ to prevent destabilizing classification.
+  * The $+ s_i$ regularizer prevents trivial collapse ($s_i \to \infty$).
+  * The effective dynamic penalty factors emerge naturally from the learned variances:
+    $$\lambda_{\text{loc}}^{\text{eff}} = \frac{\exp(-s_{\text{align}})}{\exp(-s_{\text{cls}})}, \quad \beta^{\text{eff}} = \frac{\exp(-s_{\text{dice}})}{\exp(-s_{\text{align}})}$$
+  * This allows AdamW to simultaneously optimize both the 11 million convolutional weights and the multi-objective loss balance in a single unified training pass.
+
 ---
 
 ### 2.5 Empirical DL Results & Evaluation Metrics
@@ -320,7 +334,9 @@ To prove that MediLink-DL's dual-stream compression is genuinely superior to sta
 | `compute_heatmap()` | `localization_loss.py` | `input_tensor, target_classes, create_graph=True` | `(logits, heatmaps)` | Computes differentiable normalized $512 \times 512$ saliency heatmap tensor. |
 | `alignment_loss()` | `localization_loss.py` | `heatmaps, masks, eps=1e-7` | `torch.Tensor` | Saliency Alignment Loss penalizing gradient leakage outside lung mask. |
 | `dice_loss()` | `localization_loss.py` | `heatmaps, masks, eps=1e-7` | `torch.Tensor` | Soft continuous Dice Loss enforcing regional shape overlap. |
-| `class LocalizationAwareLoss` | `localization_loss.py` | `mode="combined", lambda_loc=1.0, beta=0.5` | `nn.Module` | Master composite loss combining classification, alignment, and Dice penalties. |
+| `class LocalizationAwareLoss` | `localization_loss.py` | `mode="combined", lambda_loc=1.0, beta=0.5` | `nn.Module` | Master composite loss supporting fixed and adaptive multi-task weighting modes. |
+| `class AdaptiveLocalizationAwareLoss` | `localization_loss.py` | `eps=1e-7` | `nn.Module` | Kendall & Gal (CVPR 2018) Homoscedastic Uncertainty loss learning optimal weights automatically. |
+| `get_effective_weights()` | `localization_loss.py` | `None` | `dict` | Computes learned task weights $w_i = \exp(-s_i)$ and derived $\lambda_{\text{loc}}^{\text{eff}}, \beta^{\text{eff}}$. |
 | `generate_roi_mask_from_heatmap()`| `roi_localization.py` | `heatmap, threshold=0.35` | `np.ndarray` | Binarizes continuous heatmap into operational uint8 mask ($0$ or $255$). |
 | `create_cam_overlay()` | `roi_localization.py` | `image, heatmap, alpha=0.45` | `np.ndarray` | Generates 3-channel RGB visual overlay using pseudo-color colormap. |
 
@@ -370,3 +386,4 @@ The following visual artifacts are generated directly by the repository code and
    *5-panel image processing evidence displaying: (1) Original Radiograph, (2) Grad-CAM ROI Mask, (3) Rate-Matched Uniform Baseline, (4) MediLink-DL Dual-Stream Reconstruction, and (5) Residual Error Difference Map confirming near-zero error inside the diagnostic ROI.*
 3. **`results/real_cxr_training_curves.png`**  
    *Loss convergence curves and validation accuracy/ROC-AUC curves across epochs demonstrating stable second-order autograd training.*
+

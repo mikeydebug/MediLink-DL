@@ -168,7 +168,8 @@ def train_single_regime(
     model = MedicalResNet18(num_classes=2, pretrained=False).to(device)
     gradcam = DifferentiableGradCAM(model, model.target_layer)
     criterion = LocalizationAwareLoss(lambda_loc=lambda_loc, mode=loss_mode).to(device)
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    trainable_params = list(model.parameters()) + list(criterion.parameters())
+    optimizer = optim.AdamW(trainable_params, lr=lr, weight_decay=1e-4)
     
     best_val_score = -1.0
     best_weights = None
@@ -200,7 +201,7 @@ def train_single_regime(
                 
             loss = loss_dict["loss_total"]
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+            torch.nn.utils.clip_grad_norm_(trainable_params, max_norm=5.0)
             optimizer.step()
             
             train_loss_accum += loss.item()
