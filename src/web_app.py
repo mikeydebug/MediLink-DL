@@ -1413,11 +1413,14 @@ async function loadCryptoBenchmarkData() {
     tbody.innerHTML = '';
     rows.forEach(r => {
       const algo = r.Algorithm || r.algorithm || 'Unknown';
-      const chunk = r.Payload_Size_Bytes || r.chunk_size_bytes || '0';
-      const encUs = r.Enc_Latency_Median_us || (r.enc_time_ms ? (parseFloat(r.enc_time_ms) * 1000).toFixed(1) : (r.enc_latency_us || '0.0'));
-      const decUs = r.Dec_Latency_Median_us || (r.dec_time_ms ? (parseFloat(r.dec_time_ms) * 1000).toFixed(1) : (r.dec_latency_us || '0.0'));
+      const chunk = r.Payload_Size_Bytes || r.chunk_size_bytes || r.payload_bytes || '0';
+      const encUs = r.Enc_Latency_Median_us || r.enc_time_us || (r.enc_time_ms ? (parseFloat(r.enc_time_ms) * 1000).toFixed(1) : '0.0');
+      const decUs = r.Dec_Latency_Median_us || r.dec_time_us || (r.dec_time_ms ? (parseFloat(r.dec_time_ms) * 1000).toFixed(1) : '0.0');
       const tp = r.Throughput_MB_s || r.throughput_mb_s || '0.0';
       const tr = document.createElement('tr');
+      if (algo.includes('MLMC')) {
+        tr.style.background = 'rgba(168, 85, 247, 0.12)';
+      }
       tr.innerHTML = `
         <td><b>${algo}</b></td>
         <td>${chunk} B</td>
@@ -1592,7 +1595,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(rows).encode("utf-8"))
         elif pr.path == "/api/crypto_benchmark":
-            bench_path = PROJECT_ROOT / "results" / "crypto_benchmark.csv"
+            bench_path = PROJECT_ROOT / "results" / "crypto_research" / "mlmc_benchmark_results.csv"
+            if not bench_path.exists():
+                bench_path = PROJECT_ROOT / "results" / "crypto_benchmark.csv"
             rows = []
             if bench_path.exists():
                 with open(bench_path, "r", encoding="utf-8") as f:
