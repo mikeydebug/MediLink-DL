@@ -1983,5 +1983,11 @@ def start_server(host: str = "0.0.0.0", port: int = 8080):
 
 if __name__ == "__main__":
     import sys
-    port = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 8080
+    port_env = os.environ.get("PORT")
+    if len(sys.argv) > 1 and sys.argv[1].isdigit():
+        port = int(sys.argv[1])
+    elif port_env and port_env.isdigit():
+        port = int(port_env)
+    else:
+        port = 8080
     start_server(port=port)
