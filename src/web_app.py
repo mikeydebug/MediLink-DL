@@ -17,6 +17,7 @@ import io
 import time
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import urllib.parse
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -1547,6 +1548,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         # Clean console logging
         sys.stderr.write(f"[{self.log_date_time_string()}] {format % args}\n")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+
     def do_GET(self):
         pr = urllib.parse.urlparse(self.path)
         if pr.path == "/" or pr.path == "/index.html":
@@ -1956,12 +1962,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
 
-class ReusableHTTPServer(HTTPServer):
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     allow_reuse_address = True
+    daemon_threads = True
 
 
-def start_server(port: int = 8080):
-    server = ReusableHTTPServer(("127.0.0.1", port), DashboardHandler)
+def start_server(host: str = "0.0.0.0", port: int = 8080):
+    server = ThreadedHTTPServer((host, port), DashboardHandler)
     print(f"\n" + "=" * 75)
     print(f" MediLink-DL Clinical Telemedicine Dashboard running at: http://localhost:{port}")
     print(f" Interactive Research Console Ready for Viva Presentation.")
