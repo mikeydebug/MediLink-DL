@@ -1412,13 +1412,18 @@ async function loadCryptoBenchmarkData() {
     if (!rows || rows.length === 0) return;
     tbody.innerHTML = '';
     rows.forEach(r => {
+      const algo = r.Algorithm || r.algorithm || 'Unknown';
+      const chunk = r.Payload_Size_Bytes || r.chunk_size_bytes || '0';
+      const encUs = r.Enc_Latency_Median_us || (r.enc_time_ms ? (parseFloat(r.enc_time_ms) * 1000).toFixed(1) : (r.enc_latency_us || '0.0'));
+      const decUs = r.Dec_Latency_Median_us || (r.dec_time_ms ? (parseFloat(r.dec_time_ms) * 1000).toFixed(1) : (r.dec_latency_us || '0.0'));
+      const tp = r.Throughput_MB_s || r.throughput_mb_s || '0.0';
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><b>${r.algorithm}</b></td>
-        <td>${r.chunk_size_bytes} B</td>
-        <td>${(parseFloat(r.enc_time_ms) * 1000).toFixed(1)}</td>
-        <td>${(parseFloat(r.dec_time_ms) * 1000).toFixed(1)}</td>
-        <td>${parseFloat(r.throughput_mb_s).toFixed(2)} MB/s</td>
+        <td><b>${algo}</b></td>
+        <td>${chunk} B</td>
+        <td>${parseFloat(encUs).toFixed(1)}</td>
+        <td>${parseFloat(decUs).toFixed(1)}</td>
+        <td>${parseFloat(tp).toFixed(2)} MB/s</td>
         <td><span style="color: #34d399;">100% Detected</span></td>
       `;
       tbody.appendChild(tr);
