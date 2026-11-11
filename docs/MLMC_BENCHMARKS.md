@@ -2,7 +2,20 @@
 
 **Benchmarking Suite**: `src/crypto_research/benchmark_mlmc.py`  
 **Data File**: `results/crypto_research/mlmc_benchmark_results.csv`  
-**Test Environment**: Darwin arm64 (Apple Silicon), Python 3.11.14, OpenSSL 3.x / Cryptography 50.0.2  
+**Authors**:  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026 &nbsp;|&nbsp; **Empirical Cryptographic Benchmark Report**  
+**Test Environment**: Darwin arm64 (Apple Silicon), Python 3.11.x, OpenSSL 3.x / Cryptography 50.0.2  
 
 ---
 

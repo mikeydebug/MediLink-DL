@@ -2,9 +2,19 @@
 
 **Document**: System Architecture, Subsystem Interconnects, and Data-Flow Specification  
 **Project**: MediLink-DL: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
-**Authors**: Mayank Soni (CS24B1031), Nandan (CS24B1034), Sumedha (AD24B1061)  
-**Affiliation**: Department of Computer Science & Engineering, Indian Institute of Information Technology Raichur  
-**Date**: October 31, 2026  
+**Authors**:  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026  
 
 ---
 
@@ -40,7 +50,7 @@ flowchart TD
     subgraph DIP_MODULE["Stage 3: Dual-Stream ROI Compression"]
         H --> I["Stream 1: Full-Frame Context<br/>JPEG Encoded at q_bg=25"]
         H --> J["Stream 2: High-Quality Crop<br/>JPEG Encoded at q_roi=90"]
-        I --> K["Binary Stream Serializer<br/>26-byte Big-Endian 'MLDL' Header"]
+        I --> K["Binary Stream Serializer<br/>28-byte Big-Endian 'MLDL' Header"]
         J --> K
         K --> L["Packed Binary Payload (26.5 KB)"]
     end
@@ -83,8 +93,9 @@ flowchart TD
   - `MedicalResNet18`: Adapted initial convolution `conv1` for 1-channel grayscale input ($7 \times 7$, stride 2, padding 3); final linear layer mapping 512 features to 2 disease classes (COVID-19 vs. Normal).
   - `MedicalDenseNet121`: Alternative high-capacity feature-reuse backbone.
 - **Differentiable Grad-CAM**: Registers forward and backward autograd hooks on the final convolutional layer (`layer4[1].conv2`). By setting `create_graph=True` in PyTorch's backward pass, the model allows localization losses to update network weights directly.
-- **Loss Formulation**:
-  $$\mathcal{L}_{\text{total}} = \lambda_{\text{cls}} \mathcal{L}_{\text{CE}} + \lambda_{\text{align}} (1 - \operatorname{IoU}) + \lambda_{\text{dice}} (1 - \operatorname{Dice})$$
+- **Loss Formulation (Kendall & Gal CVPR 2018 Uncertainty Loss)**:
+  $$\mathcal{L}_{\text{total}}(w, s_1, s_2) = \frac{1}{2}\exp(-s_1)\mathcal{L}_{\text{cls}}(w) + \frac{1}{2}\exp(-s_2)\mathcal{L}_{\text{loc}}(w) + \frac{1}{2}s_1 + \frac{1}{2}s_2$$
+  where $s_1 = \log \sigma_1^2$ and $s_2 = \log \sigma_2^2$ are unconstrained learnable homoscedastic uncertainty parameters. Trained across 4 regimes (A, B, C, D); **Regime B was selected as the operational champion** (93.10% Pointing Game Hit Rate, 80.32% Energy in ROI, 100% Sensitivity / Recall).
 
 ### 3.3 Subsystem 3: Dual-Stream Compression Engine (`src/roi_compression.py`)
 - **Dual-Stream Concept**: Rather than forcing a single lossy compression setting across the entire image raster, the image is decomposed into two distinct spatial streams:

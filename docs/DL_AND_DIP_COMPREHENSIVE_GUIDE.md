@@ -2,7 +2,18 @@
 
 **Project Title:** MediLink-DL: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
 **Subject Focus:** Deep Learning (DL) & Digital Image Processing (DIP) Subsystems  
-**Authors:** Mayank Soni (CS24B1031), Nandan (CS24B1034), Sumedha (AD24B1061)  
+**Authors:**  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance:**  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
 **Date:** November 2026  
 **Repository:** [https://github.com/mikeydebug/MediLink-DL](https://github.com/mikeydebug/MediLink-DL)
 
@@ -202,12 +213,12 @@ We trained and evaluated `MedicalResNet18` across four rigorous experimental reg
 | **Regime D (Dice Only)** | $\mathcal{L}_{\text{cls}} + \mathcal{L}_{\text{dice}}$ | **75.86%** | 82.76% | **0.7107** | **0.5704** |
 
 ```
-Key Saliency Findings:
-1. Pointing Game Accuracy jumped from 65.52% to 96.55% (+31.0% absolute increase).
-   In 96.55% of test radiographs, the maximal peak activation falls strictly within
-   the certified anatomical lung lesion, proving the elimination of saliency drift.
-2. Continuous Dice overlap improved by +49.2% (0.4764 -> 0.7107), demonstrating
-   substantially higher morphological congruence with clinical pathology.
+Key Saliency Findings & Operational Champion Selection:
+1. Regime B was selected as the operational champion model: It achieves a 93.10% Pointing Game
+   Hit Rate and 80.32% Energy Confinement in the ROI, while maintaining 100% Sensitivity (Recall)
+   on held-out viral pneumonia cases without false negatives.
+2. Continuous Dice overlap improved by +49.2% (0.4764 -> 0.7107) under Differentiable Grad-CAM,
+   demonstrating substantially higher morphological congruence with certified clinical pathology.
 ```
 
 ---

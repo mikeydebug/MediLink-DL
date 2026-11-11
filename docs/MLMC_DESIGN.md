@@ -1,7 +1,19 @@
 # MediLink Mini Cipher (MLMC): Design & Specification Document
 
 **Candidate Name**: MediLink Mini Cipher (MLMC-128)  
-**Authors**: MediLink-DL Cryptographic Research Team (IIIT Raichur)  
+**Authors**:  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026  
 **Status**: Academic Research Prototype — **NOT FOR PRODUCTION CLINICAL USE**  
 **Version**: 1.0 (Experimental)  
 

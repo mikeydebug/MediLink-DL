@@ -2,9 +2,19 @@
 
 **Document**: Comprehensive Experimental Design, Dataset Stratification, and Evaluation Protocols  
 **Project**: MediLink-DL: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
-**Authors**: Mayank Soni (CS24B1031), Nandan (CS24B1034), Sumedha (AD24B1061)  
-**Affiliation**: Department of Computer Science & Engineering, Indian Institute of Information Technology Raichur  
-**Date**: October 31, 2026  
+**Authors**:  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026 &nbsp;|&nbsp; **Scientific Research Methodology**
 
 ---
 
@@ -12,10 +22,10 @@
 
 | ID | Research Question | Formal Hypothesis | Success Criterion |
 | :--- | :--- | :--- | :--- |
-| **RQ1** | Can non-uniform dual-stream bit allocation yield a measurable increase in regional ROI PSNR and SSIM compared to a uniform JPEG baseline at identical byte budgets? | Allocating high quality ($q_{\text{roi}}=90$) to the diagnostic zone while aggressively compressing background context ($q_{\text{bg}}=25$) improves diagnostic ROI PSNR by $\ge 3.0$ dB and ROI SSIM by $\ge 0.05$ at rate-matched byte budgets ($\pm 5\%$). | $\Delta \text{PSNR}_{\text{roi}} \ge 3.0\text{ dB}$, $\Delta \text{SSIM}_{\text{roi}} \ge 0.05$ |
-| **RQ2** | Does application-layer priority packet scheduling significantly accelerate clinical triage availability over lossy rural wireless links? | Prioritizing ROI packets ahead of anatomical background packets reduces time-to-first-ROI delivery by $\ge 60\%$ across simulated 48–128 kbps wireless channels compared to standard FIFO transport. | $\text{Acceleration} \ge 2.5\text{x}$ (reduction $\ge 60\%$) |
-| **RQ3** | Does authenticated envelope encryption (AEAD) introduce prohibitive computational latency on CPU-constrained edge hardware? | Modern AEAD encryption (AES-256-GCM / Ascon-AEAD128) imposes $<1.0\text{ ms}$ processing overhead per image with 100% detection of corrupted ciphertexts under bit-flip attacks. | Latency $<1.0\text{ ms}$, Tamper detection = 100% |
-| **RQ4** | Can non-Hadamard involutory MDS diffusion matrices achieve branch number $\mathcal{B}=5$ with lower implementation complexity than known Hadamard baselines? | Alternating Block-Circulant structures can achieve optimal branch number $\mathcal{B}_{\text{nibble}}=5$ and competitive bit branch number while satisfying $M^2=I$ over $\mathbb{F}_{2^4}$. | $\mathcal{B}_{\text{nibble}}=5$, $M^2=I$, Paar XOR $\le 50$ |
+| **RQ1** | Can non-uniform dual-stream bit allocation yield a measurable increase in regional ROI PSNR and SSIM compared to a uniform JPEG baseline at identical byte budgets? | Allocating high quality ($q_{\text{roi}}=90$) to the diagnostic zone while aggressively compressing background context ($q_{\text{bg}}=25$) improves diagnostic ROI PSNR by $\ge 3.0$ dB and ROI SSIM by $\ge 0.05$ at rate-matched byte budgets ($\pm 5\%$). | $\Delta \text{PSNR}_{\text{roi}} \ge 3.0\text{ dB}$, $\Delta \text{SSIM}_{\text{roi}} \ge 0.05$ (Achieved: **+10.13 dB gain**) |
+| **RQ2** | Does application-layer priority packet scheduling significantly accelerate clinical triage availability over lossy rural wireless links? | Prioritizing ROI packets ahead of anatomical background packets reduces time-to-first-ROI delivery by $\ge 60\%$ across simulated 48–128 kbps wireless channels compared to standard FIFO transport. | $\text{Acceleration} \ge 2.5\text{x}$ (Achieved: **>6.2x acceleration**) |
+| **RQ3** | Does authenticated envelope encryption (AEAD) introduce prohibitive computational latency on CPU-constrained edge hardware? | Modern AEAD encryption (AES-256-GCM / Ascon-AEAD128) imposes $<1.0\text{ ms}$ processing overhead per image with 100% detection of corrupted ciphertexts under bit-flip attacks. | Latency $<1.0\text{ ms}$, Tamper detection = 100% (Achieved: **2.2 $\mu$s AES, 100% detection**) |
+| **RQ4** | Can non-Hadamard involutory MDS diffusion matrices achieve branch number $\mathcal{B}=5$ with lower implementation complexity than known Hadamard baselines? | Alternating Block-Circulant structures can achieve optimal branch number $\mathcal{B}_{\text{nibble}}=5$ and competitive bit branch number while satisfying $M^2=I$ over $\mathbb{F}_{2^4}$. | $\mathcal{B}_{\text{nibble}}=5$, $M^2=I$, Paar XOR $\le 50$ (Achieved: **48 & 49 XORs**) |
 
 ---
 
@@ -48,24 +58,24 @@ In medical deep learning literature, random image-level splitting causes severe 
 2. `MedicalDenseNet121`: Modified 121-layer DenseNet for architectural comparative validation.
 
 ### 3.2 Four Experimental Training Regimes
-Models were trained for 30 epochs on Apple Silicon (MPS) using Adam optimizer ($\text{lr} = 10^{-4}$, weight decay $= 10^{-5}$, batch size $= 8$):
+Models were trained for 30 epochs on Apple Silicon (MPS) using AdamW optimizer ($\text{lr} = 10^{-4}$, weight decay $= 10^{-5}$, batch size $= 8$):
 - **Regime A (Classification-Only Baseline)**:
   $$\mathcal{L} = \mathcal{L}_{\text{CE}}(y, \hat{y})$$
   Evaluates standard post-hoc Grad-CAM where convolutional weights receive no localization feedback.
-- **Regime B (Combined Classification + Localization)**:
-  $$\mathcal{L} = \mathcal{L}_{\text{CE}} + 0.5 \cdot \mathcal{L}_{\text{IoU}}$$
-  Couples classification loss with smooth IoU localization alignment.
+- **Regime B (Combined Uncertainty Loss - Proposed Champion)**:
+  $$\mathcal{L}_{\text{total}}(w, s_1, s_2) = \frac{1}{2}\exp(-s_1)\mathcal{L}_{\text{cls}}(w) + \frac{1}{2}\exp(-s_2)\mathcal{L}_{\text{loc}}(w) + \frac{1}{2}s_1 + \frac{1}{2}s_2$$
+  Dynamically balances classification and continuous spatial alignment using Kendall & Gal (CVPR 2018) homoscedastic uncertainty optimization. **Operational champion model achieving 93.10% Pointing Game Hit Rate, 80.32% Energy in ROI, and 100% Sensitivity.**
 - **Regime C (Alignment-Only)**:
-  $$\mathcal{L} = \mathcal{L}_{\text{align}} = 1 - \operatorname{IoU}(M_{\text{CAM}}, M_{\text{GT}})$$
-  Focuses the model entirely on spatial bounding box intersection.
-- **Regime D (Proposed Differentiable Dice-Only)**:
-  $$\mathcal{L} = \mathcal{L}_{\text{dice}} = 1 - \operatorname{Dice}(M_{\text{CAM}}, M_{\text{GT}})$$
-  Directly maximizes soft Dice overlap between model attention and ground-truth pulmonary fields.
+  $$\mathcal{L} = \mathcal{L}_{\text{align}} = 1 - \frac{\langle \operatorname{vec}(M_{\text{CAM}}), \operatorname{vec}(M_{\text{GT}}) \rangle}{\|\operatorname{vec}(M_{\text{CAM}})\|_2 \|\operatorname{vec}(M_{\text{GT}})\|_2}$$
+  Focuses the model on spatial gradient alignment.
+- **Regime D (Dice-Only)**:
+  $$\mathcal{L} = \mathcal{L}_{\text{dice}} = 1 - \frac{2 \sum M_{\text{CAM}} M_{\text{GT}} + \epsilon}{\sum M_{\text{CAM}}^2 + \sum M_{\text{GT}}^2 + \epsilon}$$
+  Directly maximizes soft continuous Dice overlap between model attention and ground truth.
 
 ### 3.3 Localization Evaluation Metrics
 - **Continuous ROI Dice**: Soft overlap between continuous Grad-CAM heatmap $A \in [0, 1]$ and binary ground-truth mask $M \in \{0, 1\}$.
 - **Binarized IoU ($\tau=0.35$)**: Intersection-over-Union after thresholding $A$ at $\tau=0.35$.
-- **Pointing Game Hit Rate**: Evaluates whether the maximum intensity pixel $\arg\max_{(i,j)} A(i,j)$ falls within the ground-truth thoracic mask.
+- **Pointing Game Hit Rate**: Evaluates whether the maximum intensity pixel $\arg\max_{(i,j)} A(i,j)$ falls strictly within the ground-truth thoracic mask.
 - **Energy-in-ROI**: Proportion of total saliency energy contained inside the ground truth: $\frac{\sum_{(i,j) \in \text{ROI}} A(i,j)}{\sum_{i,j} A(i,j)}$.
 
 ---
@@ -84,8 +94,8 @@ Given reference image $I$ and reconstructed image $\hat{I}$:
 2. **Partitioned PSNR**:
    $$\text{PSNR}_\Omega = 10 \log_{10} \left( \frac{255^2}{\text{MSE}_\Omega} \right) \quad (\text{dB})$$
 3. **Partitioned SSIM**:
-   $$\text{SSIM}_\Omega = \frac{1}{|\Omega|} \sum_{(i,j) \in \Omega} \frac{(2 \mu_I \mu_{\hat{I}} + c_1)(2 \sigma_{I\hat{I}} + c_2)}{(\mu_I^2 + \mu_{\hat{I}}^2 + c_1)(\sigma_I^2 + \sigma_{\hat{I}}^2 + c_2)}$$
-   where $c_1 = (0.01 \times 255)^2$, $c_2 = (0.03 \times 255)^2$, and Gaussian window $\sigma=1.5$.
+   $$\text{SSIM}_\Omega = \frac{1}{|\Omega|} \sum_{(i,j) \in \Omega} S(i,j)$$
+   where $S(i,j)$ is computed via Gaussian windowing ($\sigma=1.5, 11 \times 11$).
 
 ---
 
@@ -96,39 +106,6 @@ The discrete-event channel simulator models four realistic rural telemedicine de
 | Channel Profile Name | Bandwidth ($R$) | RTT Latency | Loss Rate ($P_{\text{loss}}$) | Real-World Operational Context |
 | :--- | :---: | :---: | :---: | :--- |
 | **Rural 2G/EDGE** | 48 kbps | 200 ms | 2.0% | Remote Primary Health Centers connected via legacy 2G GSM cellular networks. |
+| **Rural 2.5G/GPRS** | 64 kbps | 120 ms | 5.0% | Typical rural wireless uplinks in developing geographies. |
 | **Rural 3G (Weak)** | 128 kbps | 150 ms | 5.0% | Fringes of mobile broadband coverage with fading signal-to-noise ratio. |
 | **Satellite VSAT** | 256 kbps | 500 ms | 2.0% | Geostationary satellite uplinks deployed in mountainous or island health posts. |
-| **Lossy Wireless** | 64 kbps | 120 ms | 10.0% | Intermittent outdoor wireless links with interference and frequent retransmissions. |
-
----
-
-## 6. Cryptographic Mutation & Verification Protocols
-
-### 6.1 Tamper-Evidence Audit
-- **Trials**: 100 independent trials per cipher.
-- **Mutation Operator**: For each trial, a fresh random plaintext is encrypted under a newly generated key and nonce. A single randomly selected bit in the ciphertext is inverted:
-  $$\text{Ciphertext}' = \text{Ciphertext} \oplus 2^k, \quad k \in [0, 7]$$
-- **Verification Rule**: Receiver attempts decryption and authentication tag validation. The test passes if and only if `InvalidTag` is raised and no decrypted plaintext is leaked.
-
-### 6.2 Nonce Freshness Audit
-- 10,000 successive encryptions are executed; all 96-bit nonces are stored in a hash set to verify that collision count is exactly zero.
-
----
-
-## 7. Cryptographic Diffusion Matrix Search & Audit Protocols
-
-### 7.1 Search Space Formulation
-- Matrix dimensions: $4 \times 4$ over finite field $\mathbb{F}_{2^4}$ using irreducible polynomial $P(x) = x^4 + x + 1$.
-- Total candidate configurations searched:
-  - Hadamard Parametric Family: $16^3 = 4,096$ configurations.
-  - Alternating Block-Circulant Family: $16^3 = 4,096$ configurations.
-  - Tensor Product Direct Binary Involutions: $2^{16} = 65,536$ configurations.
-
-### 7.2 Independent Formal Audit Verification
-All candidate matrices were independently re-audited using:
-1. Complete enumeration of all 69 square submatrices (16 of $1 \times 1$, 36 of $2 \times 2$, 16 of $3 \times 3$, and 1 of $4 \times 4$). A candidate is classified as MDS if and only if **all 69 minors are non-singular**.
-2. Exhaustive branch number calculation over all $2^{16}-1 = 65,535$ non-zero 16-bit input vectors:
-   $$\mathcal{B}_{\text{bit}} = \min_{x \ne 0} (\text{wt}_{\text{bit}}(x) + \text{wt}_{\text{bit}}(M_{\text{bin}} x))$$
-   $$\mathcal{B}_{\text{nibble}} = \min_{x \ne 0} (\text{wt}_{\text{nibble}}(x) + \text{wt}_{\text{nibble}}(M x))$$
-3. Implementation complexity minimization via Paar Heuristic-1 Common Subexpression Elimination (CSE).
-

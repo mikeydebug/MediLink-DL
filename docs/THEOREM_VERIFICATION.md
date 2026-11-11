@@ -1,10 +1,20 @@
 # Formal Verification of Cryptographic Diffusion Theorems
 
 **Document**: Mathematical Derivations, Impossibility Proofs, Counterexamples, and Scope Analysis  
-**Project**: MediLink-DL / MLMC Diffusion Research  
-**Author**: Cryptography Researcher & Formal Methods Engineer  
-**Date**: October 31, 2026  
-**Status**: Formally Verified — Test Suite Regression Passing  
+**Project**: MediLink-DL: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
+**Authors**:  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026 &nbsp;|&nbsp; **Formally Verified & Regression Passing**  
 
 ---
 
