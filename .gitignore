@@ -32,26 +32,21 @@ wheels/
 htmlcov/
 
 # Model weights and checkpoints
-*.pt
 *.pth
 *.bin
 *.onnx
 weights/
 checkpoints/
+!results/real_cxr_localization_model.pt
 
-# Large datasets (keep directory structure with .gitkeep)
+# Datasets
 data/*
 !data/.gitkeep
 !data/README.md
 !data/samples/
 !data/real_cxr/
-data/real_cxr/images/
-*.jpg
-*.jpeg
-*.png
+!data/real_cxr/**
 !results/*.png
-!data/samples/*.png
-!data/samples/*.jpg
 
 
 # Generated runtime outputs and caches

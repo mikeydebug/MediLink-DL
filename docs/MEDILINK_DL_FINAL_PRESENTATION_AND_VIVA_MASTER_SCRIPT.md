@@ -506,3 +506,4 @@ Before entering the presentation room tomorrow morning:
    open docs/MediLink_DL_DIP_Technical_Report.pdf
    ```
 4. **Whiteboard Marker Ready:** Keep black and blue markers for drawing the loss formulas and the 28-byte packet header.
+
