@@ -108,22 +108,43 @@ def create_presentation(output_path: Path):
     p.space_after = Pt(6)
     
     authors = [
-        "• Mayank Soni — Roll No: CS24B1031 (Core Compression, Metrics & Security)",
-        "• Nandan — Roll No: CS24B1034 (Network Transport Simulation & Priority Queuing)",
-        "• Sumedha — Roll No: AD24B1061 (Deep Learning & Grad-CAM Saliency Analysis)"
+        "• Mayank Soni (CS24B1031) — System Architecture, Optimization & Cryptography",
+        "• Nandan (CS24B1034) — Deep Learning Localization, Saliency & Loss Design",
+        "• Sumedha (AD24B1061) — Digital Image Processing, Dual-Stream JPEG & Priority ARQ"
     ]
     for a in authors:
         p = tf1.add_paragraph()
         p.text = a
         p.font.name = "Calibri"
-        p.font.size = Pt(11.5)
+        p.font.size = Pt(11)
         p.font.color.rgb = RGBColor(203, 213, 225)
-        p.space_after = Pt(4)
+        p.space_after = Pt(3)
         
     p = tf1.add_paragraph()
-    p.text = "\nAcademic Context: Combined Digital Image Processing & Computer Networks Research Prototype | October 2026"
+    p.text = "\nFaculty Guidance & Academic Supervision:"
     p.font.name = "Calibri"
-    p.font.size = Pt(10)
+    p.font.size = Pt(12)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(147, 197, 253)
+    p.space_after = Pt(4)
+
+    supervisors = [
+        "• Dr. Kaushiki Roy — Faculty Advisor, Digital Image Processing (DIP)",
+        "• Dr. Mehbub Alam — Faculty Advisor, Computer Networks (CN)",
+        "• Arnav Ghosh — Faculty Advisor, Multi-Objective Optimization"
+    ]
+    for s in supervisors:
+        p = tf1.add_paragraph()
+        p.text = s
+        p.font.name = "Calibri"
+        p.font.size = Pt(10.5)
+        p.font.color.rgb = RGBColor(186, 230, 253)
+        p.space_after = Pt(2)
+        
+    p = tf1.add_paragraph()
+    p.text = "\nDepartment of Computer Science & Engineering | Indian Institute of Information Technology Raichur | November 2026"
+    p.font.name = "Calibri"
+    p.font.size = Pt(9.5)
     p.font.italic = True
     p.font.color.rgb = RGBColor(148, 163, 184)
 
