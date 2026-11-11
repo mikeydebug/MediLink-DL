@@ -194,27 +194,28 @@ def build_pdf(output_path: Path):
     story = []
     
     # Title & Authors & Supervision Header
-    story.append(Paragraph("A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine", title_style))
+    story.append(Paragraph("MediLink-DL: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine", title_style))
     story.append(Paragraph("<b>Mayank Soni</b> (CS24B1031) &nbsp;&bull;&nbsp; <b>Nandan</b> (CS24B1034) &nbsp;&bull;&nbsp; <b>Sumedha</b> (AD24B1061)", author_style))
-    story.append(Paragraph("<b>Faculty Supervisors</b>: <b>Dr. Kaushiki Roy</b> (DIP) &nbsp;|&nbsp; <b>Dr. Mehbub Alam</b> (CN) &nbsp;|&nbsp; <b>Arnav Ghosh</b> (Optimization)", supervision_style))
+    story.append(Paragraph("<b>Faculty Advisors</b>: <b>Dr. Kaushiki Roy</b> (DIP) &nbsp;|&nbsp; <b>Dr. Mehbub Alam</b> (CN) &nbsp;|&nbsp; <b>Arnav Ghosh</b> (Optimization)", supervision_style))
     story.append(Paragraph("Department of Computer Science & Engineering &nbsp;|&nbsp; Indian Institute of Information Technology Raichur &nbsp;|&nbsp; November 2026", context_style))
     story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#94a3b8"), spaceAfter=8))
     
     # Abstract Box
     abstract_text = (
-        "<b>Abstract</b>—Rural primary healthcare centers in resource-constrained geographies lack on-site specialist radiologists "
-        "and rely on fragile, bandwidth-throttled communication uplinks (2G/EDGE, weak 3G, or satellite links at 48–128 kbps). "
-        "Transmitting uncompressed high-resolution digital radiographs (10–35 MB) is impractical over these links, while standard "
-        "uniform lossy compression degrades subtle diagnostic features. This paper introduces <b>MediLink-DL</b>, an integrated, "
-        "bandwidth-adaptive, and cryptographically secure framework combining: (i) clinical data curation on the Cohen et al. (2020) "
-        "cohort (166 radiographs, 110 patients) with strict patient-level non-overlapping stratification (P_train &cap; P_val = &empty;, P_train &cap; P_test = &empty;); "
-        "(ii) a single-channel <b>MedicalResNet18</b> with <b>Differentiable Grad-CAM</b> (create_graph=True) and Kendall &amp; Gal (CVPR 2018) "
-        "homoscedastic uncertainty optimization, achieving a <b>93.10% Pointing Game Hit Rate</b>, <b>80.32% Energy in ROI</b>, and <b>100% Sensitivity</b>; "
-        "(iii) a dual-stream Region-of-Interest (ROI) compression pipeline achieving a <b>9.89x compression ratio</b> (89.89% data reduction) "
-        "with diagnostic <b>ROI PSNR &gt; 48.3 dB</b> and <b>ROI SSIM &gt; 0.989</b> (+10.13 dB gain over matched uniform JPEG); "
-        "(iv) standardized authenticated encryption supporting AES-256-GCM, NIST SP 800-232 Ascon-AEAD128, and MLMC-128 research candidate with 100% bit-flip tamper rejection; "
-        "(v) application-layer priority scheduling delivering diagnostic ROIs in <b>0.391 seconds</b> (&gt;6.2x faster than FIFO); and "
-        "(vi) cross-layer multi-objective Pareto optimization identifying 26 non-dominated configurations across 108 evaluated parameter sets."
+        "<b>Abstract</b>—Sending a chest X-ray from a rural health center in Chhattisgarh to a specialist radiologist 300 kilometers away should take seconds. "
+        "On a 2G connection running at 48 kbps, it takes over an hour. That is not a network engineering statistic—it is a triage decision delayed long enough that "
+        "the patient may deteriorate in the waiting room. We built <b>MediLink-DL</b> around a straightforward clinical reality: a chest radiograph in acute "
+        "respiratory triage carries its diagnostic weight in a few square centimeters of lung consolidation, while surrounding background air and peripheral soft tissue "
+        "are not what the remote radiologist needs to inspect in the initial half-second. Evaluated on 166 real clinical chest radiographs across 110 patients "
+        "(Cohen et al. 2020 cohort) strictly partitioned at the patient level (P_train &cap; P_test = &empty;) to eliminate data leakage, we combine: "
+        "(1) a single-channel <b>MedicalResNet18</b> with <b>Differentiable Grad-CAM</b> (create_graph=True) and Kendall &amp; Gal homoscedastic uncertainty optimization, "
+        "achieving a <b>93.10% Pointing Game Hit Rate</b>, <b>80.32% Energy in ROI</b>, and <b>100% Sensitivity (Recall)</b> on viral lesions; "
+        "(2) a dual-stream differential compression scheme quantizing the diagnostic ROI at q_roi=90 and context at q_bg=25 packed inside a 28-byte binary container ('MLDL'), "
+        "cutting wire payload to <b>26,515 bytes</b> (<b>9.89x compression ratio</b>, 89.89% reduction) while sustaining an <b>ROI PSNR of 48.31 dB</b> and <b>ROI SSIM of 0.9891</b> "
+        "(a <b>+10.13 dB gain</b> over rate-matched uniform baseline JPEG); "
+        "(3) authenticated encryption supporting AES-256-GCM (2.2 &mu;s, 465 MB/s) and NIST SP 800-232 Ascon-AEAD128 with 100% bit-flip tamper rejection; "
+        "(4) priority Min-Heap scheduling delivering diagnostic ROIs in <b>0.391 seconds</b> across a 64 kbps rural channel (<b>6.21x faster than FIFO</b>); and "
+        "(5) multi-objective Pareto analysis identifying 26 non-dominated configurations from 108 evaluated parameter sets."
     )
     keywords_text = "<b>Keywords</b>: Telemedicine, Digital Image Processing, Differentiable Grad-CAM, Kendall Uncertainty, Patient-Level Splitting, Authenticated Encryption, NIST SP 800-232, Priority Scheduling, Pareto Optimization."
     
@@ -238,13 +239,13 @@ def build_pdf(output_path: Path):
     # 1. Introduction
     story.append(Paragraph("1. Introduction & Clinical Motivation", h1_style))
     story.append(Paragraph(
-        "Digital radiography (CR/DR) is the primary diagnostic frontline for detecting acute pulmonary consolidations, "
-        "pneumothoraces, and respiratory infections [1]. In urban tertiary centers, gigabit fiber and PACS facilitate instantaneous "
-        "DICOM transfer. In rural clinics, however, transmission is throttled to 48–128 kbps wireless uplinks with high packet drop rates (2–10%) "
-        "and multi-hop latencies. Transmitting raw uncompressed studies (10–35 MB) incurs multi-minute delays, while standard uniform lossy "
-        "compression introduces blocking artifacts uniformly across the visual field. Consumer tools such as WhatsApp cannot be used due "
-        "to non-compliance with HIPAA Security Rules, unverified quantization loss, and high 2G cellular latency. MediLink-DL resolves "
-        "this by uniting deep learning localization, dual-stream compression, authenticated encryption, and priority network scheduling.",
+        "Digital radiography is the primary diagnostic frontline for detecting acute pulmonary consolidations, pneumothoraces, tuberculosis, "
+        "and viral pneumonias [1]. In urban tertiary centers, gigabit fiber and PACS facilitate instantaneous DICOM transfer. In rural clinics, however, "
+        "transmission is throttled to 48–128 kbps wireless uplinks with high packet drop rates (2–10%) and multi-hop latencies. Transmitting raw "
+        "uncompressed studies (10–35 MB) incurs multi-minute delays, while standard uniform lossy compression introduces blocking artifacts uniformly "
+        "across the visual field. Consumer tools such as WhatsApp cannot be used due to non-compliance with statutory privacy rules (HIPAA/DPDP), "
+        "unverified quantization loss, and stripped DICOM tags. MediLink-DL resolves this by uniting deep learning localization, dual-stream compression, "
+        "authenticated encryption, and priority network transport.",
         body_style
     ))
     
@@ -254,7 +255,7 @@ def build_pdf(output_path: Path):
         "MediLink-DL is evaluated on genuine clinical radiographs from the open-access <b>COVID-19 Chest X-ray Dataset Initiative</b> "
         "(Cohen et al., 2020) [2] with ground-truth bilateral lung bounding boxes annotated by <code>imageannotation.ai</code>. "
         "The verified cohort comprises 166 clinical digital radiographs across 110 unique patients. To eliminate data leakage "
-        "(where images from the same individual appear in both training and test subsets, artificially inflating generalization performance), "
+        "(where multiple images from the same patient appear in both training and test subsets, artificially inflating accuracy by memorizing patient-specific anatomy), "
         "we enforce strict <b>patient-level stratification</b>: 77 training patients (111 CXRs), 16 validation patients (26 CXRs), "
         "and 17 held-out test patients (29 CXRs). Verification confirmed exactly zero patient overlap across partitions "
         "(P_train &cap; P_val = &empty;, P_train &cap; P_test = &empty;, P_val &cap; P_test = &empty;).",
@@ -264,11 +265,10 @@ def build_pdf(output_path: Path):
     # 3. Deep Learning Architecture & Differentiable Grad-CAM
     story.append(Paragraph("3. Deep Learning Localization & Kendall Uncertainty Weighting", h1_style))
     story.append(Paragraph(
-        "Standard Grad-CAM is a post-hoc visualization technique where activations and gradients are detached. In MediLink-DL, "
-        "<b>DifferentiableGradCAM</b> preserves the backward autograd computational graph (<code>create_graph=True</code>), allowing "
-        "second-order gradients to backpropagate into convolutional weights. We implement <b>MedicalResNet18</b>, adapting conv1 for "
-        "1-channel grayscale chest radiographs. To automatically balance classification loss and localization penalties without manual "
-        "hyperparameter heuristics, we formulate the Kendall &amp; Gal (CVPR 2018) [4] homoscedastic uncertainty loss:",
+        "Standard Grad-CAM is a detached post-hoc visualization technique. In MediLink-DL, <b>DifferentiableGradCAM</b> preserves the autograd "
+        "computational graph (<code>create_graph=True</code>), allowing second-order gradients to backpropagate into convolutional weights during training. "
+        "We implement <b>MedicalResNet18</b>, adapting conv1 for 1-channel grayscale radiographs. To automatically balance classification loss and spatial "
+        "localization penalties without manual hyperparameter sweeps, we implement Kendall &amp; Gal (CVPR 2018) [4] homoscedastic uncertainty optimization:",
         body_style
     ))
     story.append(Paragraph(
@@ -276,8 +276,8 @@ def build_pdf(output_path: Path):
         ParagraphStyle("Eq", parent=body_style, fontName="Courier-Oblique", fontSize=7.5, alignment=TA_CENTER)
     ))
     story.append(Paragraph(
-        "where s_1 = log(&sigma;_1^2) and s_2 = log(&sigma;_2^2) are learnable log-variance parameters optimized via autograd AdamW. "
-        "Four experimental regimes were trained on Apple Silicon MPS and evaluated on held-out test CXRs:",
+        "where s_1 = log(&sigma;_1^2) and s_2 = log(&sigma;_2^2) are learnable log-variance parameters optimized concurrently via AdamW. "
+        "Four experimental regimes were evaluated on held-out test CXRs from 17 unseen patients:",
         body_style
     ))
     
@@ -305,14 +305,14 @@ def build_pdf(output_path: Path):
     dl_fig_path = Path("results/real_cxr_gradcam_comparison.png")
     if dl_fig_path.exists():
         story.append(RLImage(str(dl_fig_path), width=504, height=125))
-        story.append(Paragraph("<b>Figure 1</b>: Qualitative Localization on Real Test CXRs: (Col 1) Original Radiograph, (Col 2) Ground-Truth Lung Mask, (Col 3) Baseline Classifier Grad-CAM exhibiting saliency drift, and (Col 4) Proposed Localization-Aware Grad-CAM tightly locked to thoracic consolidations.", caption_style))
+        story.append(Paragraph("<b>Figure 1</b>: Localization on Real CXRs: (1) Original Radiograph, (2) Ground-Truth Mask, (3) Baseline Grad-CAM exhibiting saliency drift, and (4) Proposed Differentiable Grad-CAM tightly locked to thoracic consolidations.", caption_style))
         story.append(Spacer(1, 4))
         
     # 4. Dual-Stream ROI Compression
     story.append(Paragraph("4. Dual-Stream ROI Compression on Real CXRs", h1_style))
     story.append(Paragraph(
-        "A genuine human chest radiograph (512x512, 262,144 bytes uncompressed) is decomposed via dual-stream coding: the background context "
-        "is compressed at q_bg=25, while the diagnostic lung ROI is preserved at q_roi=90. Streams are serialized into a 28-byte binary container "
+        "A genuine human chest radiograph (512x512, 262,144 bytes uncompressed) is decomposed into dual streams: background context "
+        "is compressed at q_bg=25, while the diagnostic lung ROI is preserved at q_roi=90. Streams are packed into a 28-byte binary container "
         "header ('MLDL') and reassembled at the receiver using distance-transform alpha blending (&alpha;=0.45) across a 4-pixel border:",
         body_style
     ))
@@ -338,10 +338,9 @@ def build_pdf(output_path: Path):
     # 5. Security & Computer Networks Transport
     story.append(Paragraph("5. Authenticated Encryption & Priority Network Transport", h1_style))
     story.append(Paragraph(
-        "To protect patient confidentiality and integrity, payloads are encrypted with fresh nonces using either <b>AES-256-GCM</b> "
-        "(NIST SP 800-38D, GHASH tag over GF(2^128)) or lightweight <b>Ascon-AEAD128</b> (NIST SP 800-232, 320-bit permutation). "
-        "Hospital metadata is bound via Associated Data (AAD = StudyUID || PatientID || Timestamp) enforcing <b>Zero-Plaintext Release</b>. "
-        "In our isolated cryptographic laboratory, we also benchmarked <b>MLMC-128</b>, an educational 128-bit block cipher utilizing PRESENT "
+        "Payloads are encrypted with fresh nonces using <b>AES-256-GCM</b> (NIST SP 800-38D) or lightweight <b>Ascon-AEAD128</b> "
+        "(NIST SP 800-232). Hospital metadata is bound via Associated Data (AAD = StudyUID || PatientID || Timestamp) enforcing <b>Zero-Plaintext Release</b>. "
+        "In our cryptographic laboratory, we also benchmarked <b>MLMC-128</b>, an educational 128-bit block cipher utilizing PRESENT "
         "S-boxes and circulant MDS diffusion (SAC=49.92%, B=5). Over a 64 kbps cellular link, priority min-heap scheduling delivers diagnostic "
         "ROI chunks in <b>0.391 seconds</b> vs <b>2.430 seconds</b> for FIFO transport (&gt;6.2x faster triage):",
         body_style
