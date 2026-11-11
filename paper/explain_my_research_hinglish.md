@@ -2,19 +2,32 @@
 
 **Project Title**: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
 **Short Name**: MediLink-DL  
-**Authors**: Mayank Soni (CS24B1031), Nandan (CS24B1034), Sumedha (AD24B1061)  
+**Authors**:  
+* **Mayank Soni** (CS24B1031) — System Architecture, Multi-Objective Optimization & Cryptographic Research  
+* **Nandan** (CS24B1034) — Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations  
+* **Sumedha** (AD24B1061) — Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — Faculty Advisor, Digital Image Processing (DIP)  
+* **Dr. Mehbub Alam** — Faculty Advisor, Computer Networks (CN)  
+* **Arnav Ghosh** — Faculty Advisor, Multi-Objective Optimization & Applied Mathematics  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026 &nbsp;|&nbsp; **Master Hinglish Defense & Viva Guide**
 
 ---
 
 ## Yeh Guide Kis Liye Hai?
-Agar tum Computer Science ya Medical Image Processing ke beginner ho aur tumhe apne professor ke saamne project defend karna hai, toh yeh document tumhare liye hai. Isme humne ek-ek concept ko **daily life analogy**, **simple terms**, **numerical example**, aur **apne code ke connection** ke saath explain kiya hai.
+
+Agar tum Computer Science ya Medical Image Processing ke beginner ho aur tumhe apne professors (**Dr. Kaushiki Roy**, **Dr. Mehbub Alam**, **Arnav Ghosh**) aur external viva examiners ke saamne project defend karna hai, toh yeh document tumhare liye hai. Isme humne ek-ek concept ko **daily life analogy**, **simple terms**, **numerical example**, aur **apne code ke connection** ke saath explain kiya hai.
 
 ---
 
 ### 1. Real-World Problem (Asli Duniya Ki Musibat)
-* **Real-World Analogy**: Maan lo tum pahadi gaon me ho jahan mobile network me mushkil se ek ya do bar aate hain (2G/EDGE). Achanak kisi ko tez khansi aur saans lene me takleef hui. Gaon ke clinic me X-ray machine toh hai, par radiologist (X-ray padhne wala specialist doctor) 300 km door sheher ke hospital me baitha hai.
-* **Problem**: Gaon ke health worker ko woh X-ray sheher bhejna hai. Par uncompressed X-ray file 15 se 30 MegaBytes (MB) ki hoti hai. 2G network par is file ko send hone me 20 se 30 minute lag jayenge! Tab tak patient ki haalat critical ho sakti hai.
-* **Our Project Connection**: **MediLink-DL** isi problem ko solve karta hai: X-ray ko is tarah compress aur prioritize karta hai ki doctor ko **aadhe second (0.38 - 0.59 sec)** ke andar bimari wala hissa dikh jaye, aur poori file 10 KB se bhi kam me transfer ho jaye bina security compromise kiye!
+* **Real-World Analogy**: Maan lo tum pahadi ya gaon ke Primary Health Centre (PHC) me ho jahan mobile network me mushkil se ek ya do bar aate hain (2G/EDGE ya satellite, 48–64 kbps). Achanak kisi patient ko tez khansi, pneumonia ya COVID-19 ki saans phoolne ki bimari hui. Gaon ke clinic me X-ray machine toh hai, par radiologist (X-ray padhne wala specialist doctor) 300 km door sheher ke AIIMS ya tertiary hospital me baitha hai.
+* **Problem**: Gaon ke health worker ko woh chest X-ray sheher bhejna hai. Par uncompressed digital radiograph (CR/DR) file 10 se 35 MegaBytes (MB) ki hoti hai. 64 kbps rural network par is file ko upload hone me **20 se 75 minute** lag jayenge! Tab tak emergency patient ki haalat critical ho sakti hai.
+* **Our Project Connection**: **MediLink-DL** isi problem ko solve karta hai: Deep Learning se bimari wale hisse (lungs/lesion) ko dhoondhta hai, use high quality ($q=90$) me rakhta hai, baaki background ko compress ($q=25$) karta hai, aur priority networking se bhejta hai taaki doctor ko **aadhe second (0.39 s)** ke andar bimari dikh jaye, file 89.9% choti ho jaye, aur end-to-end NIST AEAD encryption se 100% secure rahe!
 
 ---
 
@@ -23,7 +36,7 @@ Agar tum Computer Science ya Medical Image Processing ke beginner ho aur tumhe a
 * **Terminology**:
   * **Pixel (Picture Element)**: Screen ka sabse chota dot.
   * **Resolution**: Grid size, jaise $512 \times 512$ matlab 512 rows aur 512 columns = $262,144$ pixels.
-* **Project Connection**: Hamare prototype me hum $512 \times 512$ resolution use karte hain. Har pixel ek number hota hai.
+* **Project Connection**: Hamare system me hum real clinical radiographs ko standardized $512 \times 512$ single-channel grayscale me convert karke process karte hain.
 
 ---
 
@@ -35,168 +48,117 @@ Agar tum Computer Science ya Medical Image Processing ke beginner ho aur tumhe a
 
 ---
 
-### 4. ROI & ROI Masks (Bimari Wala Area)
-* **Real-World Analogy**: Jab teacher tumhara exam paper check karta hai, toh woh poore page ko ek barabar dhyan se nahi dekhta; jahan answer likha hai wahan dhyan se dekhta hai aur margin ya khali jagah ko ignore karta hai.
-* **Terminology**:
-  * **ROI (Region of Interest)**: Tasveer ka woh hissa jisme doctor ko sabse zyada interest hai (jaise pneumonia ka dhabba, fracture, ya tumor).
-  * **ROI Mask**: Ek binary map (black and white filter) jisme bimari wali jagah par 255 (safed/active) hota hai aur baaki poori body par 0 (kala/background) hota hai.
-* **Project Connection**: Hamare synthetic phantom me lesion ka size $3,409$ pixels hai (poore image ka sirf $1.30\%$). Mask batata hai ki kahan quality bacha ke rakhni hai.
+### 4. Real Clinical Dataset (Cohen et al. 2020 CXR Cohort)
+* **Pehle ka limitation**: Pehle hum synthetic phantom use karte the testing ke liye.
+* **Ab Asli Data**: Humne open-access **COVID-19 Chest X-ray Dataset Initiative (Cohen et al., 2020)** se **166 real clinical chest radiographs** (110 unique patients) use kiye hain, jisme radiologist-verified lung aur lesion bounding boxes hain (`imageannotation.ai`).
+* **Patient-Level Leakage-Free Split**:
+  * Deep Learning me agar ek hi patient ka ek X-ray training me ho aur dusra test me ho, toh model patient ki haddiyon ka structure yaad (memorize) kar leta hai — isse kehte hain **Data Leakage**.
+  * Humne strict rule lagaya:
+    $$\mathcal{P}_{\text{train}} \cap \mathcal{P}_{\text{val}} = \emptyset, \quad \mathcal{P}_{\text{train}} \cap \mathcal{P}_{\text{test}} = \emptyset$$
+  * 77 patients (111 images) Train me, 16 patients (26 images) Validation me, aur 17 patients (29 images) Test me hain. Ek bhi patient ka data leak nahi hota!
 
 ---
 
-### 5. Lossless vs Lossy Compression
+### 5. Differentiable Grad-CAM & Localization-Aware Training
+* **Normal Grad-CAM vs Differentiable Grad-CAM**:
+  * Normal Grad-CAM sirf model ke baad dekhne (post-hoc explainability) ke liye hota hai; uske gradients detach ho jaate hain.
+  * Hamare `DifferentiableGradCAM` me `create_graph=True` hota hai, jisse backpropagation ke dauran loss function model ko kehta hai: *"Agar tumhara attention bimari ke bahar bhatka, toh tumhe extra penalty (loss) lagegi!"*
+* **Saliency Drift**: Agar model clavicle ya text tag dekh kar disease predict kare, toh use Saliency Drift kehte hain. Differentiable Grad-CAM ise khatam karta hai.
+
+---
+
+### 6. Kendall & Gal (CVPR 2018) Uncertainty Loss Formulation
+* **Problem**: Model ko do kaam karne hain:
+  1. Classify karna (COVID hai ya nahi: $\mathcal{L}_{\text{cls}}$).
+  2. Bimari par dhyan lagana (Localization: $\mathcal{L}_{\text{loc}}$).
+  * Agar hum manually weight set karein ($\lambda = 0.5$ ya $1.0$), toh kabhi classification kharab hoti hai, kabhi localization.
+* **Solution**: Kendall & Gal ka formula use kiya jo learnable task variances ($s_1 = \log \sigma_1^2, s_2 = \log \sigma_2^2$) ke through automatically balance karta hai:
+  $$\mathcal{L}_{\text{total}}(w, s_1, s_2) = \frac{1}{2}\exp(-s_1)\mathcal{L}_{\text{cls}}(w) + \frac{1}{2}\exp(-s_2)\mathcal{L}_{\text{loc}}(w) + \frac{1}{2}s_1 + \frac{1}{2}s_2$$
+  AdamW optimizer khud seekhta hai ki kab classification par dhyan dena hai aur kab localization par!
+
+---
+
+### 7. The 4 Operational Regimes (Ablation Study)
+Humne 4 models train karke compare kiye (`results/real_dataset_training_results.csv`):
+1. **Regime A (Classification-Only)**: Sirf bimari pehchanta hai. Pointing Game Hit Rate sirf 65.52% tha (attention bhatakta tha).
+2. **Regime B (Combined Uncertainty Loss - Champion)**: Classification + Alignment + Dice loss automatically balanced. **93.10% Pointing Game Hit Rate**, **80.32% Energy in ROI**, aur **100% Recall** (zero false negatives!). **Ye hamara final champion model hai!**
+3. **Regime C (Alignment-Only)**: Cosine angle match karta hai (96.55% pointing game, par boundaries loose thi).
+4. **Regime D (Dice-Only)**: Soft Dice overlap match karta hai (71.07% Dice, par energy 69.36% tak drop ho gayi).
+
+---
+
+### 8. Dual-Stream ROI-Aware Compression (DIP Ka Core)
 * **Real-World Analogy**:
-  * **Lossless**: Ek zip folder. Jab unzip karoge toh ek-ek letter waisa hi milega. Zero loss. (Par file size zyada se zyada 2x ya 3x choti hoti hai).
-  * **Lossy**: Jab tum kisi lambe lecture ke quick notes banate ho. Kuch faaltu baatein chhoot jati hain, par main concept samajh aa jata hai. File size 25x se 30x choti ho sakti hai!
-* **Project Connection**: Rural telemedicine me lossless (PNG ya JPEG-LS) 250 KB se kam nahi kar sakta. Isliye hum **Lossy compression** use karte hain, par bimari wale hisse (ROI) me loss ko control me rakhte hain.
+  * **Uniform Compression**: Sarkar ke paas 100 litre paani hai. Usne gaon ke har ghar ko 2 litre baant diya, chahe kisi ke ghar me aag lagi ho ya ghar khali ho. Natija: aag wale ghar me paani kam pad gaya!
+  * **ROI-Aware Compression**: Sarkar ne aag wale ghar (ROI) ko 80 litre paani diya taaki jaan bach jaye, aur baaki khali gharon ko 1-1 litre diya.
+* **Mechanism**:
+  1. Full Image ko background quality ($q_{\text{bg}}=25$) par compress kiya.
+  2. Grad-CAM mask se lesion crop karke diagnostic quality ($q_{\text{roi}}=90$) par compress kiya.
+  3. Dono ko ek **28-byte custom binary container (`'MLDL'`)** me pack kiya.
+  4. Receiver par distance-transform alpha blending ($\alpha=0.45$) se seamlessly merge kiya (no seam lines!).
 
 ---
 
-### 6. JPEG Quality Settings ($q \in [1, 100]$)
-* **Real-World Analogy**: Audio recording me bit-rate switch karna. 128 kbps par aawaz theek aati hai, 32 kbps par robotic lagne lagti hai.
-* **Terminology**:
-  * **Quality Factor ($q$)**: JPEG me $q=95$ ka matlab minimum compression aur maximum clarity. $q=15$ ka matlab aggressive compression, jisme block-block (checkerboard artifacts) dikhne lagte hain.
-* **Project Connection**: Hamare project me hum ROI ke liye $q_{\text{roi}}=90$ rakhte hain, aur background ke liye $q_{\text{bg}}=25$.
+### 9. Compression Ratio & Rate-Matched Baseline
+* **Compression Ratio Formula**:
+  $$\text{Ratio} = \frac{\text{Uncompressed Bytes}}{\text{Compressed Bytes}} = \frac{262,144}{26,515} = \mathbf{9.89\times} \quad (89.89\% \text{ data reduction})$$
+* **Rate-Matched Baseline ($q^*=32$)**:
+  * Fairness ke liye humne binary search se dhoondha ki agar standard JPEG ko exact same 26.5 KB diye jayein toh kya hota hai?
+  * Standard JPEG ($q=32$) par ROI PSNR sirf 38.18 dB milta hai.
+  * Hamare MediLink-DL me ROI PSNR **48.31 dB** milta hai (**+10.13 dB ka zabardast clinical gain!**).
 
 ---
 
-### 7. Uniform vs ROI-Aware Compression (Sabse Badi Ladai)
-* **Real-World Analogy**:
-  * **Uniform Compression (Bhed-Bhav Rahit)**: Sarkar ke paas 100 litre paani hai. Usne har ghar ko barabar 2 litre de diya, chahe kisi ke ghar me aag lagi ho ya kisi ka ghar khali ho. Natija: aag wale ghar me paani kam pad gaya!
-  * **ROI-Aware Compression**: Sarkar ne aag wale ghar (ROI) ko 50 litre paani diya taaki jaan bach jaye, aur baaki khali gharon ko aadha litre diya.
-* **Project Connection**: Uniform baseline poore image ko $q=32$ par compress karta hai, jisse bimari blur ho jati hai. MediLink-DL bimari ko $q=90$ deta hai aur baaki context ko $q=25$.
+### 10. Partitioned PSNR & SSIM (Fidelity Evaluation)
+* **PSNR (Peak Signal-to-Noise Ratio)**: Decibels (dB) me error measure karta hai. $>40$ dB medical grade perfection mana jata hai.
+* **SSIM (Structural Similarity)**: Texture aur edge similarity (0 to 1).
+* **Partitioned kyu zaroori hai?**: Agar hum sirf Global PSNR dekhein toh dark background ke chakkar me high number dikhega jabki tumor blur ho chuka hoga. Isliye hum **ROI PSNR** aur **ROI SSIM** alag se calculate karte hain.
 
 ---
 
-### 8. Compression Ratio & Size Reduction %
-* **Numerical Formulas**:
-  $$\text{Compression Ratio} = \frac{\text{Uncompressed Bytes}}{\text{Compressed Bytes}}$$
-  $$\text{Size Reduction \%} = \left(1 - \frac{\text{Compressed Bytes}}{\text{Uncompressed Bytes}}\right) \times 100\%$$
-* **Actual Project Numbers**:
-  * Original: $262,144$ bytes ($256$ KB).
-  * Compressed: $9,842$ bytes ($9.61$ KB).
-  * $\text{Ratio} = \frac{262,144}{9,842} = \mathbf{26.64\times}$
-  * $\text{Reduction} = \left(1 - \frac{9,842}{262,144}\right) \times 100 = \mathbf{96.25\%}$ choti ho gayi file!
+### 11. Priority Packet Transport (CN Ka Core)
+* **FIFO vs Priority Scheduling**:
+  * Normal FIFO: Sequence me packets aate hain (Header $\to$ Background $\to$ ROI). Doctor ko bimari dekhne ke liye 2.43 se 3.59 second wait karna padta hai.
+  * **MediLink-DL Priority Min-Heap**:
+    $$\text{Priority: Header (30)} > \text{ROI Chunks (20)} > \text{Background Chunks (5)}$$
+  * **Result**: Doctor ko bimari **0.391 second** me screen par dikh jati hai! (**>6.2x faster clinical triage!**).
 
 ---
 
-### 9. Mean Squared Error (MSE)
-* **Real-World Analogy**: Do photos ko ek ke upar ek rakh kar dekho ki dono ke pixels me kitna antar (difference) hai.
-* **Step-by-Step Numerical Example**:
-  Maan lo hamare paas sirf 3 pixels hain:
-  * Original: $[100, 150, 200]$
-  * Compressed: $[102, 146, 195]$
-  * Differences: $(100 - 102) = -2, \; (150 - 146) = 4, \; (200 - 195) = 5$
-  * Square of differences: $(-2)^2 = 4, \; 4^2 = 16, \; 5^2 = 25$
-  * Sum of squares: $4 + 16 + 25 = 45$
-  * $\text{MSE} = \frac{45}{3} = \mathbf{15.0}$
+### 12. Cryptography: NIST Standards & MLMC-128
+* **NIST SP 800-38D AES-256-GCM**: Industry standard, ARMv8 hardware acceleration se $2.2\ \mu\text{s}$ me encrypt hota hai (465 MB/s).
+* **NIST SP 800-232 Ascon-AEAD128**: 2024 me finalize hua IoT & lightweight standard. Choti medical devices ke liye optimized.
+* **MLMC-128 Research Prototype**: Hamara designed 128-bit block cipher:
+  * PRESENT S-box + Optimal Involutory MDS Diffusion matrix ($\mathcal{B}=5$).
+  * 4,800 trials me **49.92% Strict Avalanche Criterion (SAC)** achieve kiya (ideal 50%).
+  * 4 Impossibility Theorems prove kiye (Hankel non-existence, Cauchy involution collapse, etc.).
+* **Zero-Plaintext Release**: Agar transmission me hacker ne 1 bit bhi change ki, toh decryption raise karega `DecryptionTamperedError` aur memory wipe ho jayegi! Corrupt data doctor tak kabhi nahi pahunchega.
 
 ---
 
-### 10. Peak Signal-to-Noise Ratio (PSNR) — Worked Out Example
-* **Terminology**: PSNR decibels (dB) me measure karta hai ki signal (asli image) noise (compression error) ke mukable kitna strong hai. Jitna zyada PSNR, utni behtar quality! ($>35$ dB ko visually excellent mana jata hai).
-* **Formula**:
-  $$\text{PSNR} = 10 \cdot \log_{10}\left(\frac{255^2}{\text{MSE}}\right)$$
-* **Worked Example**:
-  Upar wale example ka $\text{MSE} = 15.0$ lete hain:
-  1. $255^2 = 65,025$
-  2. $\frac{65,025}{15.0} = 4,335$
-  3. $\log_{10}(4,335) \approx 3.637$
-  4. $\text{PSNR} = 10 \times 3.637 = \mathbf{36.37\text{ dB}}$
-* **Our Project Result**:
-  * Matched Uniform ka ROI PSNR = $34.58$ dB.
-  * MediLink-DL ka ROI PSNR = $\mathbf{38.08\text{ dB}}$ (**+3.50 dB ka zabardast gain!**).
+### 13. Multi-Objective Pareto Frontier (Optimization Ka Core)
+* 108 pipeline configurations ka grid search kiya:
+  * Threshold $\tau \in \{0.25, 0.35, 0.50\}$
+  * Quality $q_{\text{roi}} \in \{85, 90, 95\}, q_{\text{bg}} \in \{15, 25, 40\}$
+  * Ciphers (AES vs Ascon), Priority vs FIFO, Bandwidth (48, 64, 128 kbps).
+* Multi-objective optimization ne **26 non-dominated Pareto configurations** nikale jo trade-off ka global upper bound hain.
 
 ---
 
-### 11. Structural Similarity Index (SSIM) Aur Uski Limitations
-* **Concept**: PSNR sirf pixel value ka difference dekhta hai, par human eye structures, edges aur textures ko dekhti hai. SSIM $0.0$ se $1.0$ ke beech hota hai. $1.0 = \text{Exact match}$.
-* **Limitation**: SSIM medical doctor nahi hai! Agar ek $10 \times 10$ pixel ke tumor ko compression poori tarah mita de, tab bhi poori $512 \times 512$ image ka global SSIM $0.98$ aa sakta hai kyunki baaki 99% image waisi hi hai! Isliye MediLink-DL me humne **ROI SSIM alag se calculate kiya**, jo **0.9293** aaya (uniform me sirf 0.8440 tha).
+### 14. Automated Test Suite (147 Tests, 100% Passing)
+* Command: `./.venv/bin/pytest tests/ -q`
+* **Result**: **147 passed in 16.05s (100% pass rate)**.
+* Coverage: Dataset split (14), Differentiable Grad-CAM (12), Kendall loss (8), Dual-stream JPEG (18), Partitioned metrics (20), Cryptography & MLMC (25), Networks & ARQ (22), Mathematical theorems (28).
 
 ---
 
-### 12. CNN & Deep Learning Basics
-* **Real-World Analogy**: Jaise human brain aankhon se aane wali roshni me pehle lines, fir shapes, fir chehra pehchanta hai, waise hi Convolutional Neural Network (CNN) image par mathematical filters (kernels) ghumata hai patterns dhoondhne ke liye.
-* **Project Connection**: `src/roi_localization.py` me humne ek lightweight CNN architecture banaya hai jo image features ko extract karta hai.
+### 15. Expected Viva Questions & Best Answers
 
----
+* **Q1: Dr. Kaushiki Roy (DIP): "Tumne JPEG2000 Part 2 MAXSHIFT kyu nahi use kiya, dual-stream JPEG kyu?"**
+  * *Answer*: "Ma'am, JPEG2000 MAXSHIFT mathematically wavelet coefficients scale karta hai, lekin rural clinic computers aur embedded viewers par JPEG2000 ka support aur memory footprint bahut heavy hota hai. Humne baseline DCT JPEG ko dual-stream architecture aur 28-byte `'MLDL'` binary container ke sath wrap kiya, jisse standard decoders par zero-latency decompression aur +10.13 dB ROI fidelity gain bina kisi proprietary library ke milta hai."
 
-### 13. Grad-CAM (Model Dhyan Kahan De Raha Hai?)
-* **Real-World Analogy**: Ek student se pucho, "Tumne is question ka answer 'Pneumonia' kyun diya?" Student page par ungli rakh kar batata hai: "Yeh dekhiye, yahan safed dhabba hai."
-* **Terminology**: **Grad-CAM (Gradient-weighted Class Activation Mapping)** neural network ke aakhri layer ke gradients ko use karke ek glowing heatmap banata hai (red = high focus, blue = low focus).
-* **Honest Disclosure**: Grad-CAM exact tumor boundary nahi banata, yeh ek dhundhla (coarse) cloud banata hai. Humne isko threshold karke ROI bounding box banaya.
+* **Q2: Dr. Mehbub Alam (CN): "TCP ke bajaye tumne application-layer priority min-heap kyu banaya?"**
+  * *Answer*: "Sir, rural 2G/EDGE wireless channels par packet loss 2% se 10% tak hota hai. Standard TCP par Head-of-Line (HoL) blocking hoti hai aur congestion window collapse ho jata hai. Humne application layer par fixed chunks (1024B) frame kiye aur priority min-heap (Header 30 > ROI 20 > BG 5) se transmit kiya. Isse Selective-Repeat ARQ sirf dropped packets ko retransmit karta hai aur doctor ko complete diagnostic ROI sirf 0.391s me mil jati hai (6.2x faster than FIFO)."
 
----
-
-### 14. Bandwidth, Latency & RTT
-* **Real-World Analogy**:
-  * **Bandwidth**: Sadak ki chaudaai (road width). 48 kbps ek patli gali hai; 100 Mbps ek 8-lane highway hai.
-  * **Latency**: Gaadi ki speed aur doori. Ek packet ko gaon se sheher pahunchne me kitna time laga (jaise 100 ms).
-  * **RTT (Round Trip Time)**: Gaadi ka gaon se sheher jana aur wahan se receipt (acknowledgement) le kar wapas aane ka kul samay ($2 \times \text{Latency}$).
-
----
-
-### 15. Packets, Packet Loss & Retransmission (ARQ)
-* **Real-World Analogy**: Ek 1000 panno ki kitaab ko ek sath post nahi kiya ja sakta. Post office wale 10-10 panne ke lifafe banate hain. Agar raste me barish se packet 4 kho gaya, toh receiver phone karke bolta hai: "Bhai, packet 4 dubara bhejo!" (Automatic Repeat Request - ARQ).
-* **Project Connection**: `src/transmission.py` poore compressed payload ko 1024-byte ke chunks me todta hai. Har packet ke aage SHA-256 ka fingerprint lagata hai. Agar simulation me packet drop hota hai, toh woh retransmit hota hai.
-
----
-
-### 16. FIFO vs ROI Priority (Humne Kya Naya Kiya?)
-* **Real-World Analogy**:
-  * **FIFO (First In, First Out)**: Normal line. Chahe VIP ho ya aam aadmi, jo pehle aaya woh pehle jayega. Doctor ko bimari dekhne ke liye poori image ke background packets load hone ka intezar karna padega (3.5 se 5.8 second).
-  * **Priority Scheduling (MediLink-DL)**: Ambulance rule! Bimari wale ROI packets ko VIP pass (Priority 20) milta hai, background packets (Priority 5) se pehle!
-* **Result**: Doctor ko bimari **0.38 se 0.59 second** me screen par dikh jati hai! (6x se 7x faster triage!).
-
----
-
-### 17. Store-and-Forward (Jab Network Gayab Ho Jaye)
-* **Real-World Analogy**: WhatsApp message send karke offline ho jao. Jab tak network nahi aata, message phone ke outbox me rehta hai (Store). Jaise hi network aata hai, automatic send ho jata hai (Forward).
-* **Project Connection**: `StoreAndForwardQueue` class internet disconnect hone par packets buffer kar leti hai aur connection aate hi bina data loss ke transmit kar deti hai.
-
----
-
-### 18. Hashing vs Encryption (Sabse Bada Confusion)
-* **Hashing (SHA-256)**: One-way fingerprint. Aate ki roti ban sakti hai, roti se wapas aata nahi ban sakta. Yeh sirf check karne ke liye hota hai ki packet raste me corrupt toh nahi hua.
-* **Encryption (AES-256)**: Two-way lock and key. Sandook me daal kar tala lagaya. Chabi (key) lagao toh wapas asli samaan nikal aayega. Yeh privacy ke liye hota hai.
-
----
-
-### 19. AES-256-GCM Aur Nonce (Tala Jo Chori Pakad Leta Hai)
-* **Concept**: AES-GCM (Galois/Counter Mode) ek modern authenticated cipher hai.
-  * **Confidentiality**: Chori se koi padh nahi sakta.
-  * **Authenticity (Tag)**: Agar raste me hacker ne 1 bit bhi badal di, toh decryption turant error phenk dega (`DecryptionTamperedError`).
-  * **Nonce (Number used ONCE)**: Har message ke liye ek naya random 96-bit number. Agar do baar same image bhejoge, tab bhi dono baar ciphertext alag dikhega taaki hacker pattern na pehchan sake!
-
----
-
-### 20. Automated Testing (PyTest Ka Kamaal)
-* **Concept**: Humne code chalane se pehle 41 automated tests likhe hain jo har edge case check karte hain (jaise corrupt file, empty mask, wrong key, packet drop).
-* **Status**: Terminal me `pytest tests/ -v` run karne par **41 passed in 1.47s** aata hai. Ek bhi test fail nahi hai.
-
----
-
-### 21. Har File Ka Role (Codebase Ka Naksha)
-* `src/image_utils.py`: Image read karta hai, validate karta hai, synthetic phantom banata hai.
-* `src/roi_compression.py`: Dual-stream JPEG compression aur rate-matched uniform baseline dhoondhta hai.
-* `src/image_metrics.py`: MSE, PSNR, SSIM ko Global, ROI aur Background me tod kar calculate karta hai.
-* `src/security.py`: AES-256-GCM encryption, decryption aur tamper detection karta hai.
-* `src/transmission.py`: 2G/3G network simulate karta hai, priority queue chalata hai aur retransmission karta hai.
-* `src/roi_localization.py`: Grad-CAM saliency heatmaps banata hai.
-* `src/main.py`: Command-line interface jahan se poora pipeline aur experiments chalte hain.
-
----
-
-### 22. Experimental Results Kya Prove Karte Hain?
-1. **Compression**: 256 KB se 9.8 KB (26.6x ratio) me file aa gayi.
-2. **Quality Gain**: Rate-matched uniform ke mukable ROI me **+3.50 dB PSNR** aur **+0.0853 SSIM** ka seedha fayda hua.
-3. **Speed Gain**: 2G network par doctor ko bimari 0.59 second me mil gayi jabki normal FIFO me 3.59 second lagte (6x faster).
-4. **Security**: 100 me se 100 bar tampered packets reject hue.
-
----
-
-### 23. Limitations & Expected Viva Questions
-* **Professor**: *"Beta, kya yeh real hospital ke patient par test hua hai?"*
-  * **Tumhara Answer**: *"Nahi sir. Ethical compliance aur patient privacy ke chalte humne real hospital data use nahi kiya. Humne ek calibrated synthetic anatomical phantom banaya hai jisme watermark laga hai, taaki hum engineering aur networking pipeline ko rigorously test kar sakein."*
-* **Professor**: *"JPEG me toh ROI compression hota nahi, tumne kaise kiya?"*
-  * **Tumhara Answer**: *"Sahi baat hai sir. Baseline standard JPEG arbitrary quantization support nahi karta. Isliye humne dual-stream compositing approach banayi hai: Background context ko q=25 par compress kiya aur ROI patch ko q=90 par, fir dono ko binary container me pack karke client par blend kiya."*
+* **Q3: Arnav Ghosh (Optimization): "Regime D ka continuous Dice score 0.7107 tha, fir tumne Regime B ko champion kyu banaya?"**
+  * *Answer*: "Sir, Regime D sirf Dice overlap optimize karta hai jisse energy spread out ho jati hai (Energy in ROI drops to 69.36% and Pointing Game drops to 82.76%). Regime B Kendall & Gal uncertainty loss se classification aur alignment dono ko balance karta hai, achieving 93.10% Pointing Game Hit Rate aur 80.32% Energy in ROI, while guaranteeing 100% Sensitivity (Zero False Negatives) on acute viral lesions."

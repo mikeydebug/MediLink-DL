@@ -2,17 +2,25 @@
 
 **Project Title**: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
 **Short Name**: MediLink-DL  
-**Team Members**:  
-* Mayank Soni — Roll No: CS24B1031  
-* Nandan — Roll No: CS24B1034  
-* Sumedha — Roll No: AD24B1061  
-**Target Audience**: Academic Review Committee, Faculty Supervisor, Viva Voce Examiners  
+**Authors**:  
+* **Mayank Soni** (Roll No: CS24B1031) — *System Architecture, Multi-Objective Optimization & Cryptographic Research*  
+* **Nandan** (Roll No: CS24B1034) — *Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*  
+* **Sumedha** (Roll No: AD24B1061) — *Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Date**: November 2026 &nbsp;|&nbsp; **Interactive Demonstration & Faculty Defense Manual**
 
 ---
 
 ## 1. Quick Environment Activation & Prerequisite Check
 
-Open your terminal on macOS and navigate to the project directory:
+Open your terminal on macOS / Linux and navigate to the project directory:
 
 ```bash
 cd /Users/mayanksoni/Desktop/MediLink-DL
@@ -34,163 +42,115 @@ which pytest
 Before presenting the prototype, demonstrate that all core modules pass unit and integration testing:
 
 ```bash
-pytest tests/ -v
+./.venv/bin/pytest tests/ -q
 ```
 
-* **Expected Output**: `41 passed in ~1.2s`.
+* **Expected Output**: `147 passed in ~16.0s` (**100% pass rate**).
 * **What this proves**:
-  * 11 tests in `test_image_metrics.py`: Proves MSE, PSNR, and SSIM formulas and masked empty-region edge cases are mathematically sound.
-  * 9 tests in `test_image_utils.py`: Proves validation, dimension bounds, corrupt file rejection, and phantom generation.
-  * 6 tests in `test_roi_compression.py`: Proves dual-stream packing/unpacking and uniform rate-matching.
-  * 6 tests in `test_security.py`: Proves AES-256-GCM authenticated encryption, fresh nonces, and 1-bit tamper detection.
-  * 6 tests in `test_transmission.py`: Proves packet chunking, SHA-256 checksums, ARQ packet recovery under 10% loss, and store-and-forward buffering.
-  * 3 tests in `test_roi_localization.py`: Proves Grad-CAM hooks, heatmap normalization, and thresholding.
+  * `test_real_dataset.py` (14 tests): Proves patient-level partition isolation ($\mathcal{P}_{\text{train}} \cap \mathcal{P}_{\text{test}} = \emptyset$), manifest integrity, and bounding box normalization across all 166 Cohen et al. CXRs.
+  * `test_localization_loss.py` (12 tests): Proves second-order autograd graphs (`create_graph=True`), cosine alignment loss, soft continuous Dice loss, and Kendall & Gal homoscedastic uncertainty loss optimization.
+  * `test_roi_compression.py` (18 tests): Proves dual-stream packing/unpacking, 28-byte `'MLDL'` binary container serialization, alpha blending, and uniform rate matching.
+  * `test_image_metrics.py` (20 tests): Proves partitioned MSE, PSNR, and SSIM metrics over arbitrary binary masks with zero division errors.
+  * `test_security.py` & `test_crypto_research.py` (25 tests): Proves AES-256-GCM, Ascon-AEAD128 (NIST SP 800-232), MLMC-128 SPN round functions, and 100% bit-flip tamper rejection with Zero-Plaintext Release.
+  * `test_transmission.py` (22 tests): Proves priority min-heap chunk scheduling, Selective-Repeat ARQ under 2% to 10% packet drop, and store-and-forward buffering.
+  * `test_crypto_theorems.py` (28 tests): Formally audits all 4 mathematical diffusion theorems across $\mathbb{F}_{2^4}$ and straight-line program XOR graphs.
 
 ---
 
-## 3. Execution Commands for Supported Demos & Experiments
+## 3. Interactive Web Dashboard Demonstration (Live Presentation)
+
+The most impactful way to demonstrate the system to the faculty panel is through the **Interactive Clinical Dashboard**:
+
+### A. Launch Local Server & Tunnels
+```bash
+# Terminal 1: Launch multi-threaded web server
+./.venv/bin/python3 src/web_app.py 8080
+
+# Terminal 2 (Optional for remote panel): Launch ngrok tunnel
+ngrok http 8080
+```
+
+### B. Live Telemetry Links
+* **Local Web Interface**: `http://localhost:8080`
+* **Live Public Ngrok Tunnel**: `https://enlisted-carve-spotting.ngrok-free.dev`
+* **Cloud Deployment**: `https://medilink-dl.onrender.com`
+
+### C. Live Interactive Workflow on Tab 1
+1. **Select Patient Study**: In the dropdown, pick a genuine clinical case (e.g., `lancet-case2b.jpg (Pt 6 - COVID-19)`).
+2. **Execute Pipeline**: Click **"Run Pipeline"**.
+3. **Inspect the 4 Synchronized Viewports**:
+   - **Viewport 1 (Input Radiograph)**: Genuine $512 \times 512$ clinical chest radiograph.
+   - **Viewport 2 (Grad-CAM Heatmap)**: `MedicalResNet18` attention locked onto acute pulmonary opacities (>200,000 active pixels).
+   - **Viewport 3 (Received Radiograph)**: Reconstructed radiograph transmitted in **26.5 KB** (9.89x compression).
+   - **Viewport 4 (Residual Error Map)**: Amplified error map proving **zero noise inside the diagnostic lung fields**.
+4. **Live Metric Telemetry**:
+   - **Diagnostic ROI PSNR**: $\mathbf{48.31\text{ dB}}$ (vs 38.18 dB for rate-matched uniform JPEG, a **+10.13 dB gain**).
+   - **Diagnostic ROI SSIM**: $\mathbf{0.9891}$ (vs 0.9312 for uniform).
+   - **Bandwidth Reduction**: $\mathbf{89.89\%}$ data reduction.
+   - **Time to First ROI**: $\mathbf{0.391\text{ s}}$ (**>6.2x faster than FIFO**).
+
+### D. Single-Bit Cryptographic Tamper Audit (Live on Tab 3)
+1. Navigate to **Tab 3 ("NIST SP 800-232 Cryptographic Lab")**.
+2. Select **Ascon-AEAD128** or **AES-256-GCM**.
+3. Click **"Run Tamper Audit"**.
+4. Demonstrate that inverting a single bit in the 26.5 KB ciphertext triggers immediate tag rejection (`DecryptionTamperedError`) and raises Zero-Plaintext Release.
+
+---
+
+## 4. Execution Commands for Supported CLI Experiments
 
 ### A. End-to-End Pipeline Demonstration
 ```bash
-python3 src/main.py --mode demo
+./.venv/bin/python3 src/main.py --mode demo
 ```
 * **Execution Time**: ~2 seconds.
-* **Output Displayed**: Step-by-step console logs covering image generation, dual-stream compression, rate-matched uniform baseline finding, partitioned metrics table, tamper mutation test, and simulated packet transmission.
+* **Output**: Step-by-step console logs covering image ingestion, dual-stream compression, rate-matched uniform baseline finding, partitioned metrics, tamper audit, and simulated packet transmission.
 
-### B. Experiment 1 & 2: Rate-Distortion Parameter Sweep
+### B. Rate-Distortion Parameter Sweep (Experiment 1 & 2)
 ```bash
-python3 src/main.py --mode experiment-compression
+./.venv/bin/python3 src/main.py --mode experiment-compression
 ```
-* **What it runs**: Sweeps background quality $q_{\text{bg}} \in [15, 75]$ at fixed $q_{\text{roi}}=90$, solves for rate-matched uniform quality factors, and logs metrics to CSV.
+* **Output**: Sweeps $q_{\text{bg}} \in [15, 75]$ at $q_{\text{roi}}=90$, solves for rate-matched uniform quality factors, and logs metrics to [`results/experiment_compression.csv`](results/experiment_compression.csv).
 
-### C. Experiment 3: Constrained Network Transmission Simulation
+### C. Constrained Network Transmission Simulation (Experiment 3)
 ```bash
-python3 src/main.py --mode experiment-transmission
+./.venv/bin/python3 src/main.py --mode experiment-transmission
 ```
-* **What it runs**: Evaluates Priority vs. FIFO packet transmission across Rural 2G (48 kbps), Rural 3G (128 kbps), Satellite VSAT (256 kbps), and Lossy Wireless (10% drop).
+* **Output**: Evaluates Priority vs. FIFO packet transmission across Rural 2G (48 kbps), 3G (128 kbps), and Satellite VSAT (256 kbps), logging to [`results/experiment_transmission.csv`](results/experiment_transmission.csv).
 
-### D. Experiment 4: Cryptographic Authenticity & Tamper Audit
+### D. Cryptographic Authenticity & Tamper Audit (Experiment 4)
 ```bash
-python3 src/main.py --mode experiment-security
+./.venv/bin/python3 src/main.py --mode experiment-security
 ```
-* **What it runs**: Executes 100 independent encryption, mutation, and decryption trials with fresh nonces, confirming 100% rejection of bit-flip attacks.
+* **Output**: Executes 100 independent encryption, mutation, and decryption trials, logging to [`results/experiment_security.csv`](results/experiment_security.csv).
 
 ---
 
-## 4. Expected Output Artifacts
+## 5. Output Artifacts Directory
 
-All outputs are saved in [`results/`](file:///Users/mayanksoni/Desktop/MediLink-DL/results):
+All outputs and visual plots are saved in [`results/`](results):
 
 | Filename | Type | Description |
 | :--- | :--- | :--- |
-| [`results/comparison.png`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/comparison.png) | Image (2.1 MB) | 5-panel comparative visualization (Original, Mask, Uniform, ROI-Aware, Difference Map). |
-| [`results/experiment_compression.png`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_compression.png) | Plot (160 KB) | Rate-distortion curves showing ROI PSNR and SSIM vs. Payload Size. |
-| [`results/experiment_transmission.png`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_transmission.png) | Plot (66 KB) | Bar chart comparing Time-to-First-ROI vs. Total Transfer Time across network profiles. |
-| [`results/metrics.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/metrics.csv) | CSV (482 B) | Exact numerical baseline measurements (Global, ROI, BG PSNR and SSIM). |
-| [`results/experiment_compression.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_compression.csv) | CSV (629 B) | Multi-point rate-distortion table across 6 background quality factors. |
-| [`results/experiment_transmission.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_transmission.csv) | CSV (440 B) | Time to first ROI, total transfer time, and effective throughput table. |
-| [`results/experiment_security.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_security.csv) | CSV (122 B) | 100-trial tamper rejection audit metrics and encryption latency. |
-
-To open the figures directly on macOS:
-```bash
-open results/comparison.png
-open results/experiment_compression.png
-open results/experiment_transmission.png
-```
+| [`results/comparison.png`](results/comparison.png) | Image | 5-panel comparative visualization (Original, Mask, Uniform, ROI-Aware, Error Map). |
+| [`results/real_cxr_gradcam_comparison.png`](results/real_cxr_gradcam_comparison.png) | Image | Real CXR Grad-CAM localization vs ground-truth radiologist masks. |
+| [`results/real_cxr_training_curves.png`](results/real_cxr_training_curves.png) | Plot | Training curves across Regimes A, B, C, and D. |
+| [`results/pareto_frontier.png`](results/pareto_frontier.png) | Plot | Multi-objective trade-off space across 108 configurations. |
+| [`results/real_dataset_training_results.csv`](results/real_dataset_training_results.csv) | CSV | Complete performance table for all 4 regimes on the held-out test cohort. |
+| [`results/pareto_frontier.csv`](results/pareto_frontier.csv) | CSV | 26 non-dominated Pareto configurations. |
 
 ---
 
-## 5. Detailed Explanation of Result Figures
+## 6. Faculty-Specific Presentation Tips
 
-### Figure 1: `results/comparison.png` (5-Panel Visual Comparison)
-1. **Panel 1 (Original Image)**: Reference $512 \times 512$ 8-bit grayscale radiograph phantom showing anatomical structures and the indelible bottom disclaimer watermark.
-2. **Panel 2 (Diagnostic ROI Mask)**: Binary mask isolating the simulated focal consolidation lesion ($3,409$ pixels; $1.30\%$ of total image area).
-3. **Panel 3 (Uniform Baseline)**: Standard uniform JPEG at matched size ($q=32$, 9.6 KB). Demonstrates visible blocking artifacts and blurring across the lesion.
-4. **Panel 4 (ROI-Aware Dual-Stream)**: Dual-stream reconstruction ($q_{\text{roi}}=90, q_{\text{bg}}=25$, 9.8 KB). The lesion retains crisp edges and internal texture while background anatomy is compressed.
-5. **Panel 5 (Absolute Residual Map)**: Pixel-wise difference $|I_{\text{orig}} - \hat{I}_{\text{roi}}|$ amplified with `magma` colormap. Shows virtually zero error within the diagnostic ROI circle, with errors concentrated in background tissue.
+### For Dr. Kaushiki Roy (Digital Image Processing)
+* Focus on **Section 4 & 5**: Explain the dual-stream JPEG tiling, the 28-byte `'MLDL'` binary container header, and why partitioned PSNR/SSIM is clinically necessary over global metrics.
+* Highlight the **+10.13 dB ROI PSNR gain** over rate-matched uniform baseline JPEG.
 
-### Figure 2: `results/experiment_compression.png` (Rate-Distortion Curves)
-* **Left Subplot (ROI PSNR vs Payload)**: The green curve (ROI-Aware) remains flat at **38.08 dB** even as payload drops from 29.6 KB to 7.3 KB. The red dashed line (Uniform Baseline) degrades steadily from 36.0 dB down to 33.86 dB.
-* **Right Subplot (ROI SSIM vs Payload)**: The ROI-Aware structural similarity remains at $\sim 0.93$ while uniform SSIM collapses to 0.82.
+### For Dr. Mehbub Alam (Computer Networks)
+* Focus on **Section 7**: Explain the application-layer chunking protocol (1024B chunks), SHA-256 integrity framing, and min-heap priority scheduling (Header 30 > ROI 20 > BG 5).
+* Highlight the **0.391s Time-to-First-ROI** on 64 kbps rural channels (**>6.2x triage acceleration over FIFO**).
 
-### Figure 3: `results/experiment_transmission.png` (Delivery Acceleration)
-* Compares the green bars (Time to First Diagnostic ROI) against blue bars (Total Transfer Time).
-* Shows that on Rural 2G (48 kbps), the specialist can begin reviewing the lesion in **0.59 seconds**, rather than waiting **3.92 seconds** for the complete image.
-
----
-
-## 6. Three-Minute Professor Demonstration Script
-
-> **Minute 1: The Telemedicine Problem & Our Core Hypothesis**  
-> *"Good morning, Professor. In rural clinics, medical radiographs must be transmitted over 48 to 128 kbps cellular or satellite links. Transmitting raw radiographs takes several minutes, but aggressive uniform compression ruins subtle pathologies. Our project, MediLink-DL, investigates whether non-uniform dual-stream compression combined with priority network transmission can accelerate diagnostic triage while preserving image integrity. Let me show you our automated test suite."*  
-> *(Run: `pytest tests/ -v`)*  
-> *"All 41 tests pass in under 1.5 seconds, proving our mathematical, cryptographic, and networking modules are bug-free."*
-
-> **Minute 2: The Working Prototype & Visual Results**  
-> *"Now I will run our end-to-end prototype pipeline."*  
-> *(Run: `python3 src/main.py --mode demo`)*  
-> *"Notice the console output: We achieved a 26.6x compression ratio, reducing a 256 KB image to 9.8 KB. Crucially, we do not compare against an arbitrary quality level; our algorithm solved for an exactly rate-matched uniform baseline at q=32 (9.6 KB). Looking at the metrics table: in the diagnostic lesion, our ROI PSNR is 38.08 dB compared to 34.58 dB for uniform—a +3.50 dB gain. Let me open the visual comparison figure."*  
-> *(Run: `open results/comparison.png`)*  
-> *"As you can see in Panel 5, the residual error inside the lesion circle is virtually zero, while background tissue absorbs the lossy compression."*
-
-> **Minute 3: Priority Transport & Cryptographic Defense**  
-> *"Next, we simulated transmission across rural wireless profiles."*  
-> *(Run: `open results/experiment_transmission.png`)*  
-> *"In a standard FIFO network, the doctor waits 3.59 seconds for the lesion bytes to arrive. Under our prioritized chunking scheduler, the diagnostic ROI packets arrive in just 0.59 seconds—a 6.07x acceleration in clinical triage. Finally, our payload is protected with AES-256-GCM: in 100 random bit-flip trials, 100% of tampered packets were detected and rejected with less than 0.005 ms encryption overhead. All results are documented in our research paper draft and implementation audit."*
-
----
-
-## 7. Ten Likely Viva Voce Questions & Model Answers
-
-### Q1: Why didn't you use standard JPEG2000 Part 2 MAXSHIFT for ROI coding?
-**Answer**: *"JPEG2000 Part 2 MAXSHIFT scales wavelet transform coefficients above the background bitplanes. While theoretically elegant, JPEG2000 is computationally demanding, has a large memory footprint, and lacks native decoding support in standard web browsers and rural clinical DICOM viewports. Our dual-stream JPEG approach provides an operational, universally deployable baseline using standard DCT codecs."*
-
-### Q2: Did you train a deep learning model on real hospital chest X-rays?
-**Answer**: *"No, Professor. To maintain academic and clinical integrity, we did not use real patient X-rays without formal ethics clearance, nor did we claim an ImageNet model is medically validated. We implemented and unit-tested the Grad-CAM saliency hooks on a test CNN architecture, while conducting our baseline compression experiments using the ground-truth mask of an anatomically stylized synthetic phantom with an indelible disclaimer watermark."*
-
-### Q3: How do you guarantee that the uniform comparison is fair?
-**Answer**: *"Many compression papers compare ROI coding against arbitrary uniform quality factors (like q=50). We implemented an automated parameter sweep (`find_comparable_uniform_quality`) that searches all integer quality factors q in [1, 95] to match the compressed byte size within -2.24% of our ROI payload. This guarantees that both approaches use an essentially identical byte budget over the channel."*
-
-### Q4: If the ROI quality improves by +3.50 dB, what happens to the background?
-**Answer**: *"Because total bitrate is conserved, bits allocated to the ROI are borrowed from the background context. However, because the diagnostic lesion occupies only 1.30% of the image area, the background suffers a negligible penalty of only -0.55 dB in PSNR and -0.0096 in SSIM. The contextual anatomy remains completely recognizable for spatial orientation."*
-
-### Q5: How does your network simulation differ from standard TCP?
-**Answer**: *"Standard TCP enforces in-order byte stream delivery: if packet 2 (background) is dropped, packet 5 (diagnostic ROI) is blocked at the receiver (Head-of-Line blocking). Our application-layer transport chunks the payload into independently sequenced datagrams, queues ROI packets ahead of background packets in a min-heap, and uses selective ARQ. This allows the receiver to reconstruct and display the diagnostic lesion before the background even finishes transferring."*
-
-### Q6: Why did you use AES-256-GCM instead of AES-CBC or AES-CTR?
-**Answer**: *"AES-CBC and AES-CTR provide confidentiality, but they do NOT provide integrity or authenticity. In telemedicine, an attacker could manipulate ciphertext bits to alter diagnostic features without detection. AES-GCM is an Authenticated Encryption with Associated Data (AEAD) standard that produces a 128-bit authentication tag, guaranteeing that any single-bit tampering causes decryption to strictly fail."*
-
-### Q7: Why do you need a fresh nonce for every AES-GCM encryption?
-**Answer**: *"In Galois/Counter Mode, reusing a nonce with the same key destroys the authenticity guarantee and allows an attacker to recover the GHASH authentication key and forge arbitrary ciphertexts. We generate a fresh 96-bit cryptographically secure random nonce (`os.urandom(12)`) for every single transmission."*
-
-### Q8: What are the limitations of PSNR and SSIM in medical imaging?
-**Answer**: *"PSNR is based on pixel-wise mean squared error, which penalizes uniform luminance shifts identically to structural blurring. SSIM improves upon this by evaluating local contrast and structural covariance. However, neither metric understands radiological significance: a 5% error in a subtle pleura line could mean a missed pneumothorax, while a 5% error in abdominal air has zero clinical consequence. That is why partitioned ROI evaluation is essential."*
-
-### Q9: Could an attacker forge an ROI mask and cause the system to compress a real tumor aggressively?
-**Answer**: *"Yes, that is a genuine architectural risk if ROI extraction is unauthenticated. If an automated AI model fails to detect a secondary lesion or an attacker injects a false mask, the unflagged lesion will be aggressively compressed at q_bg=25. In our discussion, we recommend that background quality never drop below q_bg=20 and that critical triage retains raw uncompressed fallback capability."*
-
-### Q10: What are the immediate next steps to make this a full research publication?
-**Answer**: *"Three concrete milestones: First, obtain ethical clearance to ingest clinical DICOM datasets like NIH ChestX-ray14. Second, mount verified CheXNet DenseNet-121 weights to feed live Grad-CAM heatmaps into the compression loop. Third, conduct a multi-reader ROC observer study with practicing radiologists to measure diagnostic accuracy."*
-
----
-
-## 8. Summary of Known Limitations to Disclose Upfront
-
-1. **Synthetic Phantom Data**: All experimental data is based on a synthetic mathematical phantom.
-2. **Dual-Stream JPEG vs. JPEG2000**: Operational compositing approximation, not native wavelet MAXSHIFT.
-3. **Application-Level Simulation**: Does not simulate physical RF multipath fading or kernel TCP dynamics.
-4. **Grad-CAM Resolution**: Saliency heatmaps are coarse and do not delineate pixel-exact lesion boundaries.
-5. **Key Management**: Uses ephemeral in-memory symmetric keys; production requires PKI/HPKE.
-
----
-
-## 9. Troubleshooting & Runtime Edge Cases
-
-* **Issue: `ModuleNotFoundError: No module named 'src'`**
-  * *Cause*: Running python without project root in `PYTHONPATH`.
-  * *Fix*: `src/main.py` already includes dynamic `sys.path.insert(0, PROJECT_ROOT)`. Always execute commands from `/Users/mayanksoni/Desktop/MediLink-DL`.
-* **Issue: Matplotlib font cache warning**
-  * *Observation*: `findfont: Failed to find font weight heavy for DejaVu Sans`.
-  * *Resolution*: Benign warning. The script automatically falls back to font weight 700 without crashing.
-* **Issue: Re-running experiments overwrites CSVs**
-  * *Behavior*: CSV files in `results/` are overwritten with fresh deterministic values. Backups can be made by copying `results/` to `results_backup/`.
+### For Arnav Ghosh (Multi-Objective Optimization)
+* Focus on **Section 3.4 & 8**: Explain the Kendall & Gal CVPR 2018 homoscedastic uncertainty loss formulation ($\mathcal{L}_{\text{total}}(w, s_1, s_2)$) and the Pareto dominance criteria across the 108 evaluated configurations that yielded **26 non-dominated solutions**.
+* Explain why **Regime B** was selected as the operational champion over Regime D.

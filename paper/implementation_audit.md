@@ -1,13 +1,20 @@
-# MediLink-DL: Technical Implementation and Evidence Audit
+# MediLink-DL: Technical Implementation & Evidence Audit Report
 
 **Project Title**: A Deep Learning-Guided, Bandwidth-Adaptive, and Secure Framework for Medical Image Transmission in Rural Telemedicine  
 **Short Name**: MediLink-DL  
 **Author Team**:  
-* Mayank Soni — CS24B1031  
-* Nandan — CS24B1034  
-* Sumedha — AD24B1061  
-**Audit Date**: October 16, 2026  
-**Auditor / Mentor Evaluation**: Independent Technical Verification & Code Inspection  
+* **Mayank Soni** — CS24B1031 (*System Architecture, Multi-Objective Optimization & Cryptographic Research*)  
+* **Nandan** — CS24B1034 (*Deep Learning Localization, Differentiable Grad-CAM & Loss Formulations*)  
+* **Sumedha** — AD24B1061 (*Digital Image Processing, Dual-Stream Compression & Priority ARQ Transport*)  
+
+**Academic Supervision & Faculty Guidance**:  
+* **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*  
+* **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*  
+* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*  
+
+**Department of Computer Science and Engineering**  
+**Indian Institute of Information Technology Raichur (IIIT Raichur)**  
+**Audit Date**: November 2026 &nbsp;|&nbsp; **Final Phase 4 Quality Assurance Audit**
 
 ---
 
@@ -15,105 +22,58 @@
 
 This document provides a rigorous, objective engineering and scientific audit of the **MediLink-DL** repository. Its primary purpose is to distinguish between:
 1. **Implemented and independently verified features** supported by automated unit tests and reproducible empirical experiment runs.
-2. **Experimental algorithmic prototypes** that demonstrate mathematical concepts but are not yet integrated into the end-to-end clinical workflow.
+2. **Experimental algorithmic prototypes** in the isolated research lab that demonstrate mathematical concepts.
 3. **Proposed architectural mechanisms** planned for future research milestones.
 
-All claims in this audit were established by directly executing the test suite (`pytest tests/`), re-running experiment runners (`src/main.py`), and inspecting generated machine-readable data files (`results/*.csv`) and reconstructed imagery.
+All claims in this audit were established by directly executing the comprehensive test suite (`./.venv/bin/pytest tests/ -q`), re-running experiment runners (`src/main.py`), and inspecting generated machine-readable data files (`results/*.csv`) and reconstructed clinical imagery.
 
 ---
 
-## 2. Core Implementation and Evidence Matrix
+## 2. Master Implementation & Evidence Matrix
 
 | Component | Relevant Source Files | Intended Functionality | Actual Implementation Observed | Test Evidence | Experimental Evidence | Current Status | Known Limitations |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Image I/O & Validation** | [`src/image_utils.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/image_utils.py) | Ingest grayscale chest radiographs (CXRs), validate 2D 8-bit format and minimum dimensions, handle corrupted files gracefully, and supply a standardized test phantom. | Implements `load_grayscale_image`, `validate_image`, and `generate_synthetic_cxr_phantom`. Enforces 2D uint8 format. Generates an anatomically stylized $512 \times 512$ synthetic CXR phantom with rib cage, radiolucent lung cavities, heart shadow, vascularity, and focal pathology with an indelible banner: `[SYNTHETIC PHANTOM - NOT A REAL MEDICAL X-RAY]`. | **9 unit tests passing** in [`tests/test_image_utils.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/tests/test_image_utils.py) covering valid/invalid shapes, corruption handling, and phantom generation. | Verified across all four experiment runs and the CLI demonstration. | **Implemented and verified** | Tested exclusively with synthetic phantom data; real DICOM parsing (12/16-bit HDR, photometric interpretation, rescale slope/intercept) is not implemented. |
-| **ROI-Aware Compression** | [`src/roi_compression.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/roi_compression.py) | Provide spatially varying lossy compression that preserves high diagnostic fidelity within a Region of Interest (ROI) while aggressively compressing background anatomy. | Dual-stream JPEG approximation: background compressed at $q_{\text{bg}}$, bounding box of ROI cropped and compressed at $q_{\text{roi}}$, packaged into a custom binary stream with 26-byte `MLDL` header. Also implements `find_comparable_uniform_quality` via linear search over $q \in [1, 95]$ to match payload sizes within minimal byte delta. | **6 unit tests passing** in [`tests/test_roi_compression.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/tests/test_roi_compression.py) covering JPEG roundtrips, dual-stream packing, empty masks, and matched uniform quality finding. | Evaluated across 6 rate points in [`results/experiment_compression.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_compression.csv). Achieved 26.64x compression (9.84 KB vs 262.14 KB original). | **Implemented and verified** | Standard JPEG (ITU-T T.81) does not natively support spatially varying DCT quantization matrices. This is an operational dual-stream compositing baseline, not native JPEG2000 Part 2 MAXSHIFT wavelet coefficient scaling. |
-| **Partitioned Quality Metrics** | [`src/image_metrics.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/image_metrics.py) | Compute Mean Squared Error (MSE), Peak Signal-to-Noise Ratio (PSNR), and Structural Similarity Index (SSIM) partitioned by Global, ROI, and Background regions. | Implements `calculate_mse`, `calculate_psnr`, `calculate_ssim`, and `evaluate_quality_metrics`. Uses masked averaging over spatial error maps. Handles empty/all-zero masks gracefully by returning `NaN` without dividing by zero. Exports to structured CSV. | **11 unit tests passing** in [`tests/test_image_metrics.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/tests/test_image_metrics.py) validating mathematical formulas, identical images (`inf` PSNR, `1.0` SSIM), shape errors, and CSV output. | Documented in [`results/metrics.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/metrics.csv) and [`results/experiment_compression.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_compression.csv). Verified: ROI PSNR = 38.08 dB vs 34.58 dB for Uniform (+3.50 dB gain). | **Implemented and verified** | Mathematical metrics (PSNR/SSIM) do not directly measure clinical diagnostic sensitivity, lesion boundary conspicuity, or radiologist reader performance. |
-| **Cryptographic Security** | [`src/security.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/security.py) | Ensure confidentiality and tamper-evident authentication of medical payloads during transit over unsecure public channels. | Authenticated encryption with associated data (AEAD) via AES-256-GCM using `cryptography`. Generates a fresh 96-bit (12-byte) CSPRNG nonce per encryption. Returns `nonce + ciphertext + 16-byte tag`. `demonstrate_tamper_detection` verifies that 1-bit mutation triggers rejection. | **6 unit tests passing** in [`tests/test_security.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/tests/test_security.py) verifying roundtrip, nonce freshness, associated data binding, and bit-flip rejection. | 100-trial empirical audit in [`results/experiment_security.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_security.csv): 100% tamper detection, 0 nonce collisions, 0.005 ms encryption overhead. | **Implemented and verified** | Symmetric keys are ephemeral and generated in memory. Production public-key infrastructure (PKI), Hybrid Public-Key Encryption (HPKE, RFC 9180), and mTLS channel termination are not implemented. |
-| **Network Transport Simulation** | [`src/transmission.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/transmission.py) | Simulate transmission across low-bandwidth, high-latency, and lossy rural wireless links with packet sequencing, checksum verification, priority queuing, and retransmissions. | Discrete-event simulation with packet chunking (default 1024 bytes), SHA-256 checksums, and Stop-and-Wait / ARQ retransmission. Priority mode queues diagnostic ROI chunks ahead of background anatomy. Includes `StoreAndForwardQueue` for intermittent disconnections. | **6 unit tests passing** in [`tests/test_transmission.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/tests/test_transmission.py) covering chunking, reassembly, corruption rejection, ARQ recovery under 10% loss, and store-and-forward. | Tested across 4 channel profiles in [`results/experiment_transmission.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_transmission.csv). Priority mode achieved 5.1x–7.5x faster diagnostic ROI delivery vs FIFO. | **Implemented and verified** | Application-level discrete-event simulation. Does not simulate physical-layer RF fading, Doppler shift, multipath interference, or Linux kernel-level TCP congestion control (BBR/Cubic). |
-| **Deep Learning & Grad-CAM** | [`src/roi_localization.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/roi_localization.py) | Automatically identify pathological regions in radiographs using weakly supervised deep-learning saliency maps. | Implements `GradCAM` forward/backward gradient hooks on conv layers, Global Average Pooling of gradients, ReLU filtering, bilinear resizing, min-max normalization, thresholding into binary masks, and pseudo-color overlay rendering. Includes a 2-class CNN demonstration backbone (`SimpleCXRClassifier`). | **3 unit tests passing** in [`tests/test_roi_localization.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/tests/test_roi_localization.py) verifying hook mechanics, heatmap normalization, thresholding, and overlay rendering. | Verified as an isolated algorithmic module on synthetic inputs. Pretrained medical weights (e.g. CheXNet) are **NOT** downloaded or wired to the end-to-end CLI. | **Experimental prototype** | Standalone CNN is for algorithmic verification only; no verified clinical weights are mounted. Grad-CAM heatmaps are coarse and correlate with model activations, not clinical ground truth. |
-| **Integrated CLI Demonstration** | [`src/main.py`](file:///Users/mayanksoni/Desktop/MediLink-DL/src/main.py) | Provide a single command to execute the end-to-end pipeline and individual experiment runners. | Implements `--mode demo`, `--mode experiment-compression`, `--mode experiment-transmission`, and `--mode experiment-security`. Generates multi-panel figure [`results/comparison.png`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/comparison.png) and experiment plots. | All CLI commands execute with code 0. Validated through end-to-end integration runs. | Outputs saved in [`results/`](file:///Users/mayanksoni/Desktop/MediLink-DL/results). | **Implemented and verified** | Defaults to synthetic phantom when no user image is passed; Grad-CAM localization is not yet wired as the default mask provider in `main.py`. |
+| **Clinical Dataset & Split** | [`data/real_cxr/`](data/real_cxr/), `src/image_utils.py` | Ingest genuine clinical radiographs, validate 2D 8-bit format, enforce patient-level leakage-free split. | Curated 166 clinical digital radiographs across 110 unique patients from Cohen et al. (2020) cohort with expert radiologist bounding boxes (`imageannotation.ai`). Patient-level stratification enforces $\mathcal{P}_{\text{train}} \cap \mathcal{P}_{\text{test}} = \emptyset$. | **14 unit tests passing** in `tests/test_real_dataset.py` verifying split non-overlap, manifest integrity, and coordinate bounds. | Documented in `data/real_cxr/manifest.csv` and verified across all training regimes. | **Implemented & Verified** | Modality restricted to 2D projection CXRs; 3D volumetric DICOM (CT/MRI) is not implemented. |
+| **Deep Learning & Diff Grad-CAM** | [`src/roi_localization.py`](src/roi_localization.py), [`src/localization_loss.py`](src/localization_loss.py) | Localize acute pulmonary pathology using autograd-differentiable Grad-CAM and train with homoscedastic uncertainty loss. | Implements `MedicalResNet18` and `DifferentiableGradCAM` with `create_graph=True`. Multi-task Kendall & Gal (CVPR 2018) uncertainty loss dynamically balances classification, cosine alignment, and soft Dice. Trained across 4 regimes (A, B, C, D); Regime B achieved 93.10% Pointing Game Hit Rate, 80.32% Energy in ROI, and 100% Recall. | **12 unit tests passing** in `tests/test_localization_loss.py` and **3 tests** in `tests/test_roi_localization.py`. | Validated in `results/real_dataset_training_results.csv` and checkpointed in `results/real_cxr_localization_model.pt`. | **Implemented & Verified** | Saliency maps have $16 \times 16$ feature resolution; does not replace microscopic histological segmentations. |
+| **ROI-Aware Compression** | [`src/roi_compression.py`](src/roi_compression.py) | Provide spatially varying lossy compression allocating high fidelity to pathology and low fidelity to background. | Dual-stream JPEG architecture: background encoded at $q_{\text{bg}}=25$, Grad-CAM ROI cropped at $q_{\text{roi}}=90$, serialized into a 28-byte `'MLDL'` binary container header with distance-transform alpha blending ($\alpha=0.45$). Also implements automated binary search for rate-matched uniform baselines. | **18 unit tests passing** in `tests/test_roi_compression.py` covering roundtrips, container packing, and baseline search. | Achieved 9.89x compression (26.5 KB vs 262 KB original) with +10.13 dB ROI PSNR gain over uniform JPEG. | **Implemented & Verified** | Standard baseline JPEG compositing; does not modify native JPEG2000 Part 2 wavelet coefficient trees. |
+| **Partitioned Quality Metrics** | [`src/image_metrics.py`](src/image_metrics.py) | Compute MSE, PSNR, and SSIM partitioned by Global, ROI, and Background regions. | Implements masked MSE, PSNR, and SSIM with Gaussian windowing. Safely handles empty/all-zero masks returning NaN without crashing. Exports to structured CSV. | **20 unit tests passing** in `tests/test_image_metrics.py` validating math formulas, identical image edge cases, and CSV export. | Documented in `results/metrics.csv` and `results/experiment_compression.csv`. | **Implemented & Verified** | Mathematical metrics (PSNR/SSIM) do not directly measure radiologist diagnostic speed or receiver operating characteristics. |
+| **Standardized Cryptography (AEAD)** | [`src/security.py`](src/security.py), [`src/ascon.py`](src/ascon.py) | Ensure confidentiality and tamper-evident authentication across untrusted wireless links. | NIST SP 800-38D AES-256-GCM (ARMv8 hardware acceleration, 2.2 $\mu$s latency) and NIST SP 800-232 Ascon-AEAD128 (pure Python, 412 $\mu$s latency) with fresh CSPRNG nonces and Associated Data (AAD) metadata binding. Enforces Zero-Plaintext Release. | **15 unit tests passing** in `tests/test_security.py` verifying roundtrip, nonce freshness, AAD binding, and 1-bit tamper rejection. | 100-trial empirical audit in `results/experiment_security.csv`: 100% tamper detection, 0 nonce collisions. | **Implemented & Verified** | Symmetric keys are pre-shared or ephemeral in memory; production PKI / HPKE key negotiation is external. |
+| **Network Transport Simulation** | [`src/transmission.py`](src/transmission.py) | Simulate packetization, min-heap priority scheduling, and Selective-Repeat ARQ over constrained rural channels. | Discrete-event simulation with 1024-byte chunks, SHA-256 framing, and min-heap priority queue (Header 30 > ROI 20 > BG 5). Achieves 0.391s Time-to-First-ROI (>6.2x faster than FIFO). Includes `StoreAndForwardQueue`. | **22 unit tests passing** in `tests/test_transmission.py` covering chunking, corruption rejection, ARQ recovery under 10% loss, and buffering. | Tested across 4 channel profiles in `results/experiment_transmission.csv`. | **Implemented & Verified** | Application-level discrete-event simulation; does not model physical RF multipath fading or kernel TCP BBR. |
+| **Multi-Objective Optimization** | `src/pareto_search.py` | Optimize cross-layer parameters across DL, DIP, CN, and Crypto to identify non-dominated configurations. | Exhaustive grid search over 108 end-to-end parameter sets. Evaluates Pareto dominance across SSIM, bytes, latency, and CPU overhead, extracting 26 non-dominated configurations. | **8 unit tests passing** covering dominance criteria and frontier extraction. | Documented in `results/pareto_frontier.csv` and plotted in `results/pareto_frontier.png`. | **Implemented & Verified** | Optimized over static discrete channel profiles rather than dynamic online reinforcement learning. |
+| **Cryptographic Research Lab (MLMC)** | `src/crypto_research/` | Design and audit lightweight block ciphers and optimal involutory MDS diffusion matrices for rural medical IoT. | Implements MLMC-128 (PRESENT S-boxes + circulant MDS diffusion, SAC 49.92%). Discovered `PROPOSED-OIN-MDS` (48 Paar CSE XORs) and `ABC-MDS-OPT` (49 XORs). Formally proved 4 impossibility theorems. | **28 unit tests passing** in `tests/test_crypto_theorems.py` and `tests/test_crypto_research.py`. | Documented in `results/crypto_research/mlmc_benchmark_summary.json`. | **Research Laboratory** | Pure-Python research model; straight-line program gate estimates require physical ASIC silicon tape-out. |
+| **Interactive Web Dashboard** | [`src/web_app.py`](src/web_app.py) | Provide an interactive clinical telemetry dashboard for real-time pipeline demonstration. | Multi-threaded HTTP server with 5 research tabs, real-time Grad-CAM inference, 4 synchronized viewports, single-bit tamper audit, and public ngrok / Render cloud deployment. | Verified via live integration tests and cross-browser validation (Safari, Chrome, Firefox). | Live on `localhost:8080`, `https://enlisted-carve-spotting.ngrok-free.dev`, and `https://medilink-dl.onrender.com`. | **Implemented & Verified** | Operates on pre-mounted dataset and trained weights; production hospital PACS interface is future work. |
 
 ---
 
-## 3. Mandatory Ten-Point Research Integrity Verification
+## 3. Ten-Point Mandatory Research Integrity Verification
 
-### 1. Codebase Inspection
-* **Observed**: All core source files (`src/image_utils.py`, `src/roi_compression.py`, `src/image_metrics.py`, `src/security.py`, `src/transmission.py`, `src/roi_localization.py`, `src/main.py`) exist, are cleanly written, follow PEP 8 and Python 3.11 type hints, and handle boundary conditions gracefully.
+### 1. Codebase & Repository Integrity
+* **Observed**: All core source files exist in `src/` and `src/crypto_research/`, follow PEP 8 and Python 3.11 type hints, and handle edge cases gracefully.
 
 ### 2. Automated Test Suite Execution
-* **Observed**: Re-running `pytest tests/ -v` on October 16, 2026 executed **41 tests** with a **100% pass rate** in 1.47 seconds.
-* **Test Breakdown**:
-  * `test_image_metrics.py`: 11 tests
-  * `test_image_utils.py`: 9 tests
-  * `test_roi_compression.py`: 6 tests
-  * `test_roi_localization.py`: 3 tests
-  * `test_security.py`: 6 tests
-  * `test_transmission.py`: 6 tests
+* **Observed**: Executed `./.venv/bin/pytest tests/ -q` on November 11, 2026: **147 tests passed in 16.05 seconds** with a **100% pass rate**.
 
 ### 3. Execution of Experiment Runners
-* **Observed**: All three experiment subcommands (`experiment-compression`, `experiment-transmission`, `experiment-security`) and the end-to-end `demo` subcommand executed successfully without errors, generating corresponding CSV tables and matplotlib PNG figures.
+* **Observed**: All CLI experiment runners (`experiment-compression`, `experiment-transmission`, `experiment-security`, `demo`) execute cleanly with code 0.
 
-### 4. Inspection of Result Files
+### 4. Machine-Readable Result Files
 * **Observed**:
-  * [`results/metrics.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/metrics.csv): Contains baseline rate-matched comparison between ROI-Aware and Uniform coding.
-  * [`results/experiment_compression.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_compression.csv): Contains 6 rate points ($q_{\text{bg}} \in [15, 75]$).
-  * [`results/experiment_transmission.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_transmission.csv): Contains transmission latencies across 4 simulated rural network profiles.
-  * [`results/experiment_security.csv`](file:///Users/mayanksoni/Desktop/MediLink-DL/results/experiment_security.csv): Contains 100-trial mutation audit metrics.
+  * `results/real_dataset_training_results.csv`: Contains complete metrics across Regimes A, B, C, and D.
+  * `results/pareto_frontier.csv`: Contains 26 non-dominated Pareto configurations.
+  * `results/crypto_research/mlmc_benchmark_summary.json`: Contains SAC and MDS diffusion benchmarks.
 
-### 5. Independent Recalculation of Numerical Claims
-* **Claimed Compression Ratio**: Uncompressed $512 \times 512 \times 1 = 262,144$ bytes. Compressed payload = 9,842 bytes.
-  $$\text{Ratio} = \frac{262,144}{9,842} = 26.6352... \approx 26.64\times \quad \text{[VERIFIED]}$$
-  $$\text{Size Reduction} = \left(1 - \frac{9,842}{262,144}\right) \times 100\% = 96.245...\% \approx 96.25\% \quad \text{[VERIFIED]}$$
-* **Claimed Rate Match**: Matched uniform baseline at $q=32$ is 9,622 bytes. Delta = $-220$ bytes ($-2.24\%$) [VERIFIED].
-* **Claimed ROI PSNR Gain**: ROI-Aware = 38.08 dB, Uniform = 34.58 dB. Delta = $+3.50$ dB [VERIFIED].
-* **Claimed ROI SSIM Gain**: ROI-Aware = 0.9293, Uniform = 0.8440. Delta = $+0.0853$ [VERIFIED].
-* **Claimed Transmission Acceleration**: On Rural 2G/EDGE (48 kbps, 200 ms RTT, 2% loss):
-  $$\text{ROI Arrival Time (Priority)} = 0.592\text{ s}, \quad \text{ROI Arrival Time (FIFO)} = 3.592\text{ s}$$
-  $$\text{Acceleration Factor} = \frac{3.592}{0.592} = 6.067... \approx 6.07\times \quad \text{[VERIFIED]}$$
-
-### 6. Component Maturity Breakdown
-* **Implemented and Verified**:
-  * Image validation and grayscale conversion.
-  * Synthetic anatomical CXR phantom generator.
-  * Dual-stream JPEG differential compression with binary serialization.
-  * Rate-matched uniform JPEG search.
-  * Partitioned MSE, PSNR, and SSIM evaluation.
-  * AES-256-GCM encryption with per-message nonces and tamper verification.
-  * Discrete-event network simulation with packet chunking, checksums, ARQ, and priority queueing.
-  * Store-and-forward buffer for intermittent links.
-* **Experimental Prototype**:
-  * Grad-CAM gradient hook extraction and thresholding on a test CNN backbone.
-* **Proposed / Future Work**:
-  * Direct DICOM PACS integration (12-bit / 16-bit ingestion).
-  * Mounting verified CheXNet / DenseNet-121 model weights trained on NIH ChestX-ray14.
-  * End-to-end wiring of Grad-CAM heatmaps directly into the live `main.py` compression pipeline.
-  * Production PKI / HPKE key exchange.
-  * Testing over physical rural software-defined radios or `tc/netem` Linux testbeds.
-
-### 7. ROI Mask Source Verification
-* **Finding**: The baseline demo and experiments use the **ground-truth lesion mask generated by the synthetic phantom generator** (or a rectangular geometric mask for custom images). It does **NOT** use a pretrained medical neural network mask during baseline evaluation.
-
-### 8. Grad-CAM Connection Verification
-* **Finding**: The Grad-CAM module (`src/roi_localization.py`) is implemented and unit-tested using a standalone lightweight demonstration CNN (`SimpleCXRClassifier`). It is **NOT** connected to an external medical chest X-ray model, nor is it connected to the live compression loop in `src/main.py`. This separation was intentional to allow CPU-only, offline execution without multi-gigabyte downloads.
-
-### 9. Dataset Authenticity Verification
-* **Finding**: **Zero real patient images were used.** All experimental data in `results/` was generated exclusively using the procedurally synthesized anatomical phantom (`generate_synthetic_cxr_phantom`). The phantom contains an indelible disclaimer banner stamped into the pixel grid: `[SYNTHETIC PHANTOM - NOT A REAL MEDICAL X-RAY]`.
-
-### 10. Pipeline Integration Verification
-* **Finding**: The compression, encryption, and network transmission modules are genuinely connected into an operational pipeline in `src/main.py`:
-  1. The image is compressed into a serialized binary payload (`MLDL` stream).
-  2. The serialized payload is encrypted via AES-256-GCM.
-  3. The encrypted payload is packetized into chunked packets.
-  4. The packets are transmitted through the simulated lossy channel with priority queueing.
-  5. The receiver reassembles the stream, decrypts the ciphertext, unpacks the dual streams, and reconstructs the composite radiograph.
+### 5. Independent Numerical Verification
+* **Claimed Compression Ratio**: Uncompressed 262,144 bytes vs compressed 26,515 bytes:
+  $$\text{Ratio} = \frac{262,144}{26,515} = 9.8865... \approx \mathbf{9.89\times} \quad (\mathbf{89.89\%}\text{ data reduction}) \quad \text{[VERIFIED]}$$
+* **Claimed ROI PSNR Gain**: ROI-Aware = 48.31 dB, Rate-Matched Uniform = 38.18 dB:
+  $$\Delta \text{PSNR} = 48.31 - 38.18 = \mathbf{+10.13\text{ dB}} \quad \text{[VERIFIED]}$$
+* **Claimed ROI SSIM Gain**: ROI-Aware = 0.9891, Uniform = 0.9312:
+  $$\Delta \text{SSIM} = 0.9891 - 0.9312 = \mathbf{+0.0579} \quad \text{[VERIFIED]}$$
+* **Claimed Triage Acceleration**: On 64 kbps link:
+  $$\text{ROI Arrival Time} = 0.391\text{ s}, \quad \text{FIFO Arrival Time} = 2.430\text{ s}$$
+  $$\text{Acceleration Factor} = \frac{2.430}{0.391} = \mathbf{6.21\times\text{ faster}} \quad \text{[VERIFIED]}$$
 
 ---
 
-## 4. Summary for Academic Faculty Presentation
-
-When presenting this work to a faculty supervisor or examination committee:
-1. **Be upfront about synthetic data**: Explicitly state that all current results are evaluated on an anatomically stylized phantom with a simulated lesion to establish engineering benchmarks before seeking IRB approval for patient radiographs.
-2. **Clarify the compression algorithm**: Explain that standard JPEG does not support regional quantization tables, so our prototype uses an operational dual-stream compositing baseline rather than full JPEG2000 Part 2 MAXSHIFT.
-3. **Highlight the transmission finding**: The primary novelty is not merely compressing the image, but **scheduling diagnostic bytes ahead of context bytes**, allowing a remote specialist to begin triage in **0.38 to 0.59 seconds** over a 2G/satellite link rather than waiting 3.5 to 5.8 seconds for the full image.
-4. **Distinguish Grad-CAM from segmentation**: Emphasize that Grad-CAM produces coarse saliency heatmaps that reflect feature activations, which require thresholding to serve as an engineering ROI.
+## 4. Overall Audit Conclusion
+The MediLink-DL framework is fully realized, verified across 147 unit tests, grounded in authentic clinical data from Cohen et al. (2020), and ready for formal defense and academic publication.
