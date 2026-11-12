@@ -330,14 +330,72 @@ To eliminate any ambiguity, let us trace one single training step ($t=1$) throug
    $$\mathcal{L}_{\text{total}} = \frac{1}{2}(1.0)(0.2877) + \frac{1}{2}(1.0)(0.3103) + \frac{1}{2}(0.0) + \frac{1}{2}(0.0) = 0.1438 + 0.1552 = \mathbf{0.2990}$$
 
 ### [Phase 3: Backward Pass (`loss.backward()`)]
-PyTorch executes automatic differentiation to compute the gradients:
-1. **Gradient of Kendall Knob $s_{\text{cls}}$**:
-   $$g_{s} = \frac{\partial \mathcal{L}_{\text{total}}}{\partial s_{\text{cls}}} = \frac{1}{2} - \frac{1}{2}e^{-s_{\text{cls}}}\mathcal{L}_{\text{cls}} = 0.500 - 0.500(1.0)(0.2877) = 0.500 - 0.1438 = \mathbf{+0.3562}$$
-2. **Gradient of Model Weight $W$**:
-   Via chain rule, both tasks send back gradient forces:
-   $$\frac{\partial \mathcal{L}_{\text{cls}}}{\partial W} = -0.4000 \quad (\text{push to increase } \hat{p})$$
-   $$\frac{\partial \mathcal{L}_{\text{loc}}}{\partial W} = -0.6000 \quad (\text{push to increase heatmap overlap})$$
-   $$g_W = \frac{\partial \mathcal{L}_{\text{total}}}{\partial W} = \frac{1}{2}(1.0)(-0.4000) + \frac{1}{2}(1.0)(-0.6000) = -0.2000 - 0.3000 = \mathbf{-0.5000}$$
+PyTorch executes automatic differentiation using the multi-variable calculus Chain Rule to compute gradients for both model weights and uncertainty parameters:
+
+#### 1. Gradients of Kendall Uncertainty Knobs ($s_{\text{cls}}$ and $s_{\text{loc}}$)
+Both uncertainty knobs are updated independently:
+
+* **Classification Knob Gradient ($g_{s_{\text{cls}}}$)**:
+  $$g_{s_{\text{cls}}} = \frac{\partial \mathcal{L}_{\text{total}}}{\partial s_{\text{cls}}} = \frac{1}{2} - \frac{1}{2}e^{-s_{\text{cls}}}\mathcal{L}_{\text{cls}} = 0.500 - 0.500(1.0)(0.2877) = 0.500 - 0.1438 = \mathbf{+0.3562}$$
+
+* **Localization Knob Gradient ($g_{s_{\text{loc}}}$)**:
+  $$g_{s_{\text{loc}}} = \frac{\partial \mathcal{L}_{\text{total}}}{\partial s_{\text{loc}}} = \frac{1}{2} - \frac{1}{2}e^{-s_{\text{loc}}}\mathcal{L}_{\text{loc}} = 0.500 - 0.500(1.0)(0.3103) = 0.500 - 0.15515 = \mathbf{+0.3448}$$
+
+*(Note: In our actual implementation in `src/localization_loss.py`, localization is further split into $s_{\text{align}}$ and $s_{\text{dice}}$, giving three separate gradients $g_{s_{\text{cls}}}, g_{s_{\text{align}}}, g_{s_{\text{dice}}}$ computed in parallel).*
+
+---
+
+#### 2. Detailed Chain Rule Derivation for Model Weights ($W$)
+How does the convolutional kernel weight $W$ receive gradient signals? Via the Chain Rule:
+
+##### A) Classification Gradient: How $\frac{\partial \mathcal{L}_{\text{cls}}}{\partial W} = -0.4000$ Is Derived
+The dependency chain is:
+$$W \xrightarrow{\text{linear conv}} \text{Logit } z \xrightarrow{\text{softmax}} \text{Probability } \hat{p} \xrightarrow{\text{cross-entropy}} \mathcal{L}_{\text{cls}}$$
+
+Applying the Chain Rule:
+$$\frac{\partial \mathcal{L}_{\text{cls}}}{\partial W} = \frac{\partial \mathcal{L}_{\text{cls}}}{\partial z} \times \frac{\partial z}{\partial W}$$
+
+* **Step 1: Derivative of Cross-Entropy with respect to Logit $z$**:
+  For binary cross-entropy with sigmoid/softmax activation, the derivative simplifies cleanly to $(\text{Prediction} - \text{Target})$:
+  $$\frac{\partial \mathcal{L}_{\text{cls}}}{\partial z} = \hat{p} - y = 0.750 - 1.000 = \mathbf{-0.2500}$$
+  *(The negative sign represents an error signal demanding an increase in logit $z$ to make $\hat{p} \to 1.0$).*
+* **Step 2: Derivative of Logit $z$ with respect to Weight $W$**:
+  Since $z = W \cdot x_{\text{feat}}$, the derivative with respect to $W$ is the input feature magnitude $x_{\text{feat}} = 1.600$:
+  $$\frac{\partial z}{\partial W} = x_{\text{feat}} = \mathbf{1.6000}$$
+* **Step 3: Chain Rule Multiplication**:
+  $$\frac{\partial \mathcal{L}_{\text{cls}}}{\partial W} = (\hat{p} - y) \cdot x_{\text{feat}} = (-0.2500) \cdot (1.6000) = \mathbf{-0.4000}$$
+
+##### B) Localization Gradient: How $\frac{\partial \mathcal{L}_{\text{loc}}}{\partial W} = -0.6000$ Is Derived (Differentiable Grad-CAM)
+Because `create_graph=True` preserves second-order autograd connections, the gradient propagates backward through the continuous Grad-CAM heatmap into the convolutional kernel:
+$$W \xrightarrow{\text{conv}} \text{Feature Map } A \xrightarrow{\text{Grad-CAM}} \text{Heatmap } M_{\text{CAM}} \xrightarrow{\text{Dice Loss}} \mathcal{L}_{\text{loc}}$$
+
+Applying the Chain Rule:
+$$\frac{\partial \mathcal{L}_{\text{loc}}}{\partial W} = \frac{\partial \mathcal{L}_{\text{dice}}}{\partial M_{\text{CAM}}} \times \frac{\partial M_{\text{CAM}}}{\partial A} \times \frac{\partial A}{\partial W}$$
+
+* **Step 1: Derivative of Dice Loss with respect to Heatmap $M_{\text{CAM}}$**:
+  Recall the continuous Dice formula:
+  $$\mathcal{L}_{\text{dice}} = 1 - \frac{2 M_{\text{CAM}} M_{\text{GT}}}{M_{\text{CAM}}^2 + M_{\text{GT}}^2}$$
+  Differentiating with respect to $M_{\text{CAM}}$ using the quotient rule $\frac{d}{du}[\frac{u}{v}] = \frac{u'v - uv'}{v^2}$:
+  $$\frac{\partial \mathcal{L}_{\text{dice}}}{\partial M_{\text{CAM}}} = -\frac{2 M_{\text{GT}}(M_{\text{GT}}^2 - M_{\text{CAM}}^2)}{(M_{\text{CAM}}^2 + M_{\text{GT}}^2)^2}$$
+  Plugging in our values ($M_{\text{CAM}} = 0.400, M_{\text{GT}} = 1.000$):
+  $$\text{Numerator} = 2(1.000) \cdot \big(1.000^2 - 0.400^2\big) = 2 \cdot (1.000 - 0.160) = 2 \cdot 0.840 = 1.680$$
+  $$\text{Denominator} = \big(0.400^2 + 1.000^2\big)^2 = (0.160 + 1.000)^2 = (1.160)^2 = 1.3456$$
+  $$\frac{\partial \mathcal{L}_{\text{dice}}}{\partial M_{\text{CAM}}} = -\frac{1.680}{1.3456} \approx \mathbf{-1.2485}$$
+* **Step 2: Derivative of Heatmap with respect to Feature Map $A$**:
+  In Grad-CAM, $M_{\text{CAM}} = \operatorname{ReLU}(\alpha \cdot A)$, so over active regions:
+  $$\frac{\partial M_{\text{CAM}}}{\partial A} = \alpha = \mathbf{0.6670}$$
+* **Step 3: Derivative of Feature Map with respect to Weight $W$**:
+  For convolution $A = W \cdot x_{\text{in}}$, with local input $x_{\text{in}} = 0.720$:
+  $$\frac{\partial A}{\partial W} = x_{\text{in}} = \mathbf{0.7200}$$
+* **Step 4: Chain Rule Multiplication**:
+  $$\frac{\partial \mathcal{L}_{\text{loc}}}{\partial W} = (-1.2485) \times (0.6670) \times (0.7200) \approx \mathbf{-0.6000}$$
+
+##### C) Composite Gradient for Weight $W$ under Kendall Formulation
+Combining both task gradients weighted by their respective uncertainty terms:
+$$g_W = \frac{\partial \mathcal{L}_{\text{total}}}{\partial W} = \frac{1}{2}\exp(-s_{\text{cls}})\frac{\partial \mathcal{L}_{\text{cls}}}{\partial W} + \frac{1}{2}\exp(-s_{\text{loc}})\frac{\partial \mathcal{L}_{\text{loc}}}{\partial W}$$
+$$g_W = \frac{1}{2}(1.0)(-0.4000) + \frac{1}{2}(1.0)(-0.6000) = -0.2000 - 0.3000 = \mathbf{-0.5000}$$
+
+> **Physical Meaning**: Both classification (pushing to identify disease) and localization (pushing to shift the heatmap from clavicle to lung) agree that increasing $W$ reduces total error. They combine into a strong negative gradient force $g_W = -0.5000$.
 
 ---
 
@@ -398,16 +456,31 @@ Let us calculate the exact numbers for Step 1 ($t=1$) and Step 2 ($t=2$):
 3. **Adaptive Step Size**:
    $$\sqrt{\hat{v}_1} = \sqrt{0.1269} \approx 0.3562$$
    $$\text{Step} = \frac{0.001}{0.3562} \cdot (+0.3562) = \mathbf{+0.0010}$$
-4. **New Knob Value $s_1$**:
+4. **New Knob Value $s_{\text{cls}, 1}$**:
    $$s_1 = s_0 - \text{Step} = 0.0000 - 0.0010 = \mathbf{-0.0010}$$
 5. **Resulting Effective Weight**:
    $$w_{\text{cls}} = \exp(-s_1) = \exp(-(-0.0010)) = \exp(0.0010) = \mathbf{1.0010}$$
 
-> **Conclusion**: Because classification loss was low ($0.2877 < 1.0$), the positive gradient nudged $s$ downward, slightly increasing the priority multiplier $w_{\text{cls}}$ from $1.0000$ to $1.0010$.
+---
+
+#### C) Step $t=1$ for Kendall Localization Knob $s_{\text{loc}}$ (Initial $s_0 = 0.0000, g_1 = +0.3448$):
+1. **Momentum $m_1$**:
+   $$m_1 = 0.1 \cdot (+0.3448) = +0.03448 \implies \hat{m}_1 = \frac{0.03448}{0.1} = \mathbf{+0.3448}$$
+2. **Velocity $v_1$**:
+   $$v_1 = 0.001 \cdot (+0.3448)^2 = 0.001 \cdot 0.11889 = 0.0001189 \implies \hat{v}_1 = \frac{0.0001189}{0.001} = \mathbf{0.1189}$$
+3. **Adaptive Step Size**:
+   $$\sqrt{\hat{v}_1} = \sqrt{0.1189} \approx 0.3448$$
+   $$\text{Step} = \frac{0.001}{0.3448} \cdot (+0.3448) = \mathbf{+0.0010}$$
+4. **New Knob Value $s_{\text{loc}, 1}$**:
+   $$s_1 = s_0 - \text{Step} = 0.0000 - 0.0010 = \mathbf{-0.0010}$$
+5. **Resulting Effective Weight**:
+   $$w_{\text{loc}} = \exp(-s_1) = \exp(0.0010) = \mathbf{1.0010}$$
+
+> **Conclusion**: Because both initial losses ($\mathcal{L}_{\text{cls}} = 0.2877$ and $\mathcal{L}_{\text{loc}} = 0.3103$) were well-behaved and $<1.0$, AdamW gently decreased both log-variances, slightly increasing their effective task weights. If one task had suffered a massive loss (e.g., $\mathcal{L}_{\text{loc}} = 4.5$), its gradient would have been negative ($0.5 - 0.5(4.5) = -1.75$), prompting AdamW to increase $s_{\text{loc}}$, automatically dampening the volatile task!
 
 ---
 
-#### C) Step $t=2$: Demonstrating the Power of Momentum
+#### D) Step $t=2$: Demonstrating the Power of Momentum
 Suppose on the second batch, the gradient for $W$ is once again $g_2 = -0.5000$ (the slope continues in the same direction). Look at how momentum builds up:
 $$m_2 = \beta_1 m_1 + (1 - \beta_1) g_2 = 0.9 \cdot (-0.0500) + 0.1 \cdot (-0.5000) = -0.0450 - 0.0500 = \mathbf{-0.0950}$$
 Corrected momentum:
