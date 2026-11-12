@@ -422,3 +422,4 @@ def build_report_pdf(output_path: Path):
 if __name__ == "__main__":
     out_report = Path("paper/MediLink_DL_Project_Report.pdf")
     build_report_pdf(out_report)
+

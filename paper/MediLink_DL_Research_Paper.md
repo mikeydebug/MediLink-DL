@@ -8,7 +8,7 @@
 **Academic Supervision & Faculty Guidance**:
 * **Dr. Kaushiki Roy** — *Faculty Advisor, Digital Image Processing (DIP)*
 * **Dr. Mehbub Alam** — *Faculty Advisor, Computer Networks (CN)*
-* **Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*
+* **Dr. Arnav Ghosh** — *Faculty Advisor, Multi-Objective Optimization & Applied Mathematics*
 
 **Department of Computer Science and Engineering**
 **Indian Institute of Information Technology Raichur (IIIT Raichur)**
@@ -378,7 +378,7 @@ One direction we are curious about is replacing the JPEG codec entirely with a l
 
 ## 12. Acknowledgements
 
-We owe a lot to our faculty advisors at IIIT Raichur. **Dr. Kaushiki Roy** guided us through the image processing side — the partitioned metric design, spatial frequency analysis, and the nuances of radiological fidelity evaluation. She also pushed us to think more carefully about why global metrics can mislead in medical imaging contexts, which shaped how we report results throughout this paper. **Dr. Mehbub Alam** kept us grounded on the networking reality: what rural cellular channels actually look like, how ARQ protocols behave under sustained loss, and how to build a channel simulator that reflects real conditions rather than optimistic assumptions. More than once, he pointed out that we were benchmarking against an idealized channel that does not exist in Rajasthan. **Arnav Ghosh** worked through the multi-objective optimization formulation with us and pushed us on the mathematical rigor of the diffusion matrix proofs — especially the impossibility results, which became much cleaner after those conversations.
+We owe a lot to our faculty advisors at IIIT Raichur. **Dr. Kaushiki Roy** guided us through the image processing side — the partitioned metric design, spatial frequency analysis, and the nuances of radiological fidelity evaluation. She also pushed us to think more carefully about why global metrics can mislead in medical imaging contexts, which shaped how we report results throughout this paper. **Dr. Mehbub Alam** kept us grounded on the networking reality: what rural cellular channels actually look like, how ARQ protocols behave under sustained loss, and how to build a channel simulator that reflects real conditions rather than optimistic assumptions. More than once, he pointed out that we were benchmarking against an idealized channel that does not exist in Rajasthan. **Dr. Arnav Ghosh** worked through the multi-objective optimization formulation with us and pushed us on the mathematical rigor of the diffusion matrix proofs — especially the impossibility results, which became much cleaner after those conversations.
 
 We also thank Cohen et al. (2020) and the broader medical imaging community for maintaining the COVID-19 Chest X-ray Dataset Initiative as an open-access resource. Without real clinical data, this project would have been a simulation exercise in a vacuum.
 

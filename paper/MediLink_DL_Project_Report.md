@@ -649,3 +649,4 @@ We also thank the open-access medical research community and Cohen et al. (2020)
 10. C. Beierle, A. Canteaut, and G. Leander, "Lightweight invertible diffusion layers," *IACR Transactions on Symmetric Cryptology*, vol. 2018, no. 3, pp. 1–34, 2018.
 11. V. Cauchois and P. Loidreau, "On the number of involutory MDS matrices over finite fields," *Designs, Codes and Cryptography*, vol. 87, no. 2, pp. 527–542, 2019.
 12. D. Han, X. Wang, and B. Preneel, "Constructing lightweight MDS and near-MDS matrices," in *Information Security and Cryptology (Inscrypt 2016)*, LNCS vol. 10148, Springer, 2016, pp. 112–129.
+
