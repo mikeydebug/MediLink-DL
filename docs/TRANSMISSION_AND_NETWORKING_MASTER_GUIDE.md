@@ -319,7 +319,7 @@ The web dashboard (`src/web_app.py`) provides a real-time visual interface for c
 ```
 
 ---
-
+<!-- 
 ## 9. Viva Defense Master Cheat Sheet (Networking Q&A)
 
 Use these concise, authoritative responses during viva defense:
@@ -339,3 +339,4 @@ Use these concise, authoritative responses during viva defense:
 ---
 
 *End of Networking Master Guide. Maintained under the MediLink-DL Project Repository at `docs/TRANSMISSION_AND_NETWORKING_MASTER_GUIDE.md`.*
+ -->

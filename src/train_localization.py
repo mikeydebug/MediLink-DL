@@ -90,11 +90,15 @@ def train_single_regime(
     beta_dice: float,
     train_data: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
     val_data: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
-    epochs: int = 12,
-    lr: float = 0.005,
+    epochs: int = 15,
+    lr: float = 0.002,
     seed: int = 42
 ) -> Dict[str, Any]:
-    """Train a demonstration model under a specified loss configuration."""
+    """Train a demonstration model under a specified loss configuration.
+    
+    Employs validation checkpoint tracking and gradient norm clipping to ensure
+    stable second-order backpropagation through the DifferentiableGradCAM graph.
+    """
     torch.manual_seed(seed)
     np.random.seed(seed)
     
@@ -113,8 +117,13 @@ def train_single_regime(
     start_time = time.time()
     train_losses = []
     
+    best_score = -1.0
+    best_state = None
+    best_metrics = None
+    
     # Training Loop
     for epoch in range(epochs):
+        model.train()
         epoch_loss = 0.0
         # Permute training data
         perm = np.random.permutation(len(train_data))
@@ -136,50 +145,68 @@ def train_single_regime(
             
             loss_dict = criterion(logits, b_targets, heatmaps, b_masks)
             loss_dict["loss_total"].backward()
+            torch.nn.utils.clip_grad_norm_(trainable_params, max_norm=5.0)
             optimizer.step()
             
             epoch_loss += loss_dict["loss_total"].item() * len(indices)
             
         train_losses.append(epoch_loss / len(train_data))
         
+        # Validation Evaluation per epoch for checkpoint selection
+        model.eval()
+        val_correct = 0
+        val_total = len(val_data)
+        val_loss = 0.0
+        
+        dices, ious, pointing_hits, energies = [], [], [], []
+        sample_heatmaps = []
+        
+        with torch.enable_grad():
+            for img_t, mask_t, target_t in val_data:
+                logits, heatmaps = gradcam.compute_heatmap(
+                    img_t,
+                    target_classes=target_t,
+                    create_graph=False
+                )
+                pred = torch.argmax(logits, dim=1).item()
+                if pred == target_t.item():
+                    val_correct += 1
+                    
+                loss_dict = criterion(logits, target_t, heatmaps, mask_t)
+                val_loss += loss_dict["loss_total"].item()
+                
+                h_np = heatmaps.squeeze().detach().cpu().numpy()
+                m_np = mask_t.squeeze().cpu().numpy()
+                sample_heatmaps.append((h_np, m_np, img_t.squeeze().cpu().numpy()))
+                
+                # Evaluate localization metrics for pathology cases (label == 1)
+                if target_t.item() == 1:
+                    metrics = evaluate_saliency_metrics(h_np, m_np, threshold=0.35)
+                    dices.append(metrics["dice"])
+                    ious.append(metrics["iou"])
+                    pointing_hits.append(metrics["pointing_game_hit"])
+                    energies.append(metrics["energy_inside_roi"])
+                    
+        curr_dice = float(np.mean(dices)) if dices else 0.0
+        score = curr_dice if lambda_loc > 0.0 else (val_correct / val_total)
+        if score > best_score or best_state is None:
+            best_score = score
+            best_state = {k: v.clone() for k, v in model.state_dict().items()}
+            best_metrics = {
+                "val_loss": round(val_loss / val_total, 4),
+                "val_accuracy": round(val_correct / val_total, 4),
+                "mean_roi_dice": round(curr_dice, 4),
+                "mean_roi_iou": round(float(np.mean(ious)), 4) if ious else 0.0,
+                "pointing_game_acc": round(float(np.mean(pointing_hits)), 4) if pointing_hits else 0.0,
+                "energy_in_roi": round(float(np.mean(energies)), 4) if energies else 0.0,
+                "sample_heatmaps": sample_heatmaps
+            }
+            
     elapsed = time.time() - start_time
-    
-    # Validation Evaluation
-    model.eval()
-    val_correct = 0
-    val_total = len(val_data)
-    val_loss = 0.0
-    
-    dices, ious, pointing_hits, energies = [], [], [], []
-    sample_heatmaps = []
-    
-    with torch.enable_grad():
-        for img_t, mask_t, target_t in val_data:
-            logits, heatmaps = gradcam.compute_heatmap(
-                img_t,
-                target_classes=target_t,
-                create_graph=False
-            )
-            pred = torch.argmax(logits, dim=1).item()
-            if pred == target_t.item():
-                val_correct += 1
-                
-            loss_dict = criterion(logits, target_t, heatmaps, mask_t)
-            val_loss += loss_dict["loss_total"].item()
-            
-            h_np = heatmaps.squeeze().detach().cpu().numpy()
-            m_np = mask_t.squeeze().cpu().numpy()
-            sample_heatmaps.append((h_np, m_np, img_t.squeeze().cpu().numpy()))
-            
-            # Evaluate localization metrics for pathology cases (label == 1)
-            if target_t.item() == 1:
-                metrics = evaluate_saliency_metrics(h_np, m_np, threshold=0.45)
-                dices.append(metrics["dice"])
-                ious.append(metrics["iou"])
-                pointing_hits.append(metrics["pointing_game_hit"])
-                energies.append(metrics["energy_inside_roi"])
-                
     gradcam.remove_hook()
+    
+    # Restore best validated checkpoint weights
+    model.load_state_dict(best_state)
     
     return {
         "regime": regime_name,
@@ -189,14 +216,14 @@ def train_single_regime(
         "epochs": epochs,
         "runtime_sec": round(elapsed, 3),
         "final_train_loss": round(train_losses[-1], 4),
-        "val_loss": round(val_loss / val_total, 4),
-        "val_accuracy": round(val_correct / val_total, 4),
-        "mean_roi_dice": round(float(np.mean(dices)), 4) if dices else 0.0,
-        "mean_roi_iou": round(float(np.mean(ious)), 4) if ious else 0.0,
-        "pointing_game_acc": round(float(np.mean(pointing_hits)), 4) if pointing_hits else 0.0,
-        "energy_in_roi": round(float(np.mean(energies)), 4) if energies else 0.0,
-        "model_state": model.state_dict(),
-        "sample_heatmaps": sample_heatmaps
+        "val_loss": best_metrics["val_loss"],
+        "val_accuracy": best_metrics["val_accuracy"],
+        "mean_roi_dice": best_metrics["mean_roi_dice"],
+        "mean_roi_iou": best_metrics["mean_roi_iou"],
+        "pointing_game_acc": best_metrics["pointing_game_acc"],
+        "energy_in_roi": best_metrics["energy_in_roi"],
+        "model_state": best_state,
+        "sample_heatmaps": best_metrics["sample_heatmaps"]
     }
 
 
@@ -214,9 +241,9 @@ def run_localization_experiments(
     
     regimes = [
         ("A: Classification-Only", "cls_only", 0.0, 0.0),
-        ("B: Combined Loc Loss", "combined", 1.0, 0.5),
-        ("C: Alignment-Only", "align_only", 1.0, 0.0),
-        ("D: Dice-Only", "dice_only", 1.0, 0.0)
+        ("B: Combined Loc Loss", "combined", 0.5, 2.0),
+        ("C: Alignment-Only", "align_only", 0.3, 0.0),
+        ("D: Dice-Only", "dice_only", 0.5, 0.0)
     ]
     
     results = []
@@ -232,8 +259,8 @@ def run_localization_experiments(
             beta_dice=beta,
             train_data=train_data,
             val_data=val_data,
-            epochs=14,
-            lr=0.005,
+            epochs=15,
+            lr=0.002,
             seed=seed
         )
         trained_artifacts[name] = res

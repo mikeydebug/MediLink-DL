@@ -570,7 +570,7 @@ Out of 108 configurations, 82 were mathematically dominated. Exactly **26 non-do
   * Time-to-First-ROI over 64 kbps link: **0.391 seconds** (**6.21× faster than FIFO**).
 
 ---
-
+<!-- 
 ## 11. Viva Defense Master Cheat Sheet (Tough Questions & Exact Answers)
 
 Use this quick-reference sheet when defending the project before faculty advisors or external examiners:
@@ -596,4 +596,4 @@ Use this quick-reference sheet when defending the project before faculty advisor
 ---
 
 *End of Technical Master Guide. Maintained under the MediLink-DL Project Repository at `docs/DEEP_LEARNING_AND_OPTIMIZATION_MASTER_GUIDE.md`.*
-
+ -->
